@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/components/AuthProvider';
 import { createClient } from '@/lib/supabase/client';
 import { PartyCard } from '@/components/PartyCard';
@@ -33,7 +33,8 @@ interface PendingInvite {
 export default function PartiesPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
   const [parties, setParties] = useState<Party[]>([]);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [loading, setLoading] = useState(true);
@@ -136,17 +137,22 @@ export default function PartiesPage() {
       .single();
 
     if (error || !party) {
-      toast('Failed to create party', 'error');
+      console.error('Party create error:', error?.message, error?.details, error?.hint);
+      toast(`Failed to create party: ${error?.message || 'Unknown error'}`, 'error');
       setCreating(false);
       return;
     }
 
-    await supabase.from('party_members').insert({
+    const { error: memberError } = await supabase.from('party_members').insert({
       party_id: party.id,
       user_id: user.id,
       role: 'owner',
       status: 'accepted',
     });
+
+    if (memberError) {
+      console.error('Member insert error:', memberError.message);
+    }
 
     toast('Party created!', 'success');
     setNewParty({ name: '', description: '', purpose: '' });

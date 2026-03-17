@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { formatDateForDB } from '@/lib/utils';
@@ -30,7 +30,8 @@ interface HeatmapData {
 
 export function useTimeEntries() {
   const { user } = useAuth();
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [stats, setStats] = useState<Stats>({ today: 0, week: 0, month: 0 });
   const [heatmapData, setHeatmapData] = useState<HeatmapData>({});
@@ -83,11 +84,15 @@ export function useTimeEntries() {
     const yearAgo = new Date(today);
     yearAgo.setDate(yearAgo.getDate() - 364);
 
-    const { data } = await supabase.rpc('get_user_heatmap', {
+    const { data, error } = await supabase.rpc('get_user_heatmap', {
       p_user_id: user.id,
       p_start_date: formatDateForDB(yearAgo),
       p_end_date: formatDateForDB(today),
     });
+
+    if (error) {
+      console.error('Heatmap fetch error:', error.message);
+    }
 
     const map: HeatmapData = {};
     (data || []).forEach((d: { date: string; total_minutes: number }) => {
@@ -119,7 +124,10 @@ export function useTimeEntries() {
       category?: string;
       party_id?: string | null;
     }) => {
-      if (!user) return null;
+      if (!user) {
+        console.error('addEntry: no user');
+        return { data: null, error: { message: 'Not authenticated' } };
+      }
 
       const { data, error } = await supabase
         .from('time_entries')
@@ -135,13 +143,18 @@ export function useTimeEntries() {
         .select()
         .single();
 
-      if (!error && data) {
-        setEntries((prev) => [data, ...prev]);
-        await fetchStats();
-        await fetchHeatmap();
+      if (error) {
+        console.error('addEntry error:', error.message, error.details, error.hint);
+        return { data: null, error };
       }
 
-      return { data, error };
+      if (data) {
+        setEntries((prev) => [data, ...prev]);
+        fetchStats();
+        fetchHeatmap();
+      }
+
+      return { data, error: null };
     },
     [user, supabase, fetchStats, fetchHeatmap]
   );
@@ -152,7 +165,7 @@ export function useTimeEntries() {
       fetchStats();
       fetchHeatmap();
     }
-  }, [user, fetchEntries, fetchStats, fetchHeatmap]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { entries, stats, heatmapData, loading, addEntry, refresh: fetchEntries };
 }

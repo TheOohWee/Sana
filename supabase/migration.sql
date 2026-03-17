@@ -142,17 +142,20 @@ CREATE POLICY "Owner can delete party"
   ON parties FOR DELETE
   USING (auth.uid() = created_by);
 
+-- Helper function to avoid RLS recursion on party_members
+CREATE OR REPLACE FUNCTION get_user_party_ids(p_user_id UUID)
+RETURNS SETOF UUID AS $$
+  SELECT party_id FROM party_members WHERE user_id = p_user_id;
+$$ LANGUAGE sql SECURITY DEFINER STABLE;
+
 -- PARTY MEMBERS policies
-CREATE POLICY "Members can view party members"
+CREATE POLICY "Users can view own memberships"
   ON party_members FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM party_members pm
-      WHERE pm.party_id = party_members.party_id
-        AND pm.user_id = auth.uid()
-    )
-    OR party_members.user_id = auth.uid()
-  );
+  USING (user_id = auth.uid());
+
+CREATE POLICY "Users can view co-members"
+  ON party_members FOR SELECT
+  USING (party_id IN (SELECT get_user_party_ids(auth.uid())));
 
 CREATE POLICY "Owner or self can insert member"
   ON party_members FOR INSERT

@@ -5,7 +5,6 @@ import { Plus, Minus, Clock } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
-import { useTimeEntries } from '@/hooks/useTimeEntries';
 import { useToast } from './ui/Toast';
 
 interface Party {
@@ -15,16 +14,22 @@ interface Party {
 
 interface ManualTimeEntryProps {
   parties: Party[];
+  onLogTime: (entry: {
+    duration_minutes: number;
+    note?: string;
+    source: 'pomodoro' | 'manual';
+    category?: string;
+    party_id?: string | null;
+  }) => Promise<{ data: unknown; error: unknown } | null | undefined>;
 }
 
-export function ManualTimeEntry({ parties }: ManualTimeEntryProps) {
+export function ManualTimeEntry({ parties, onLogTime }: ManualTimeEntryProps) {
   const [hours, setHours] = useState(0);
   const [minutes, setMinutes] = useState(30);
   const [category, setCategory] = useState('');
   const [note, setNote] = useState('');
   const [partyId, setPartyId] = useState('');
   const [loading, setLoading] = useState(false);
-  const { addEntry } = useTimeEntries();
   const { toast } = useToast();
 
   const partyOptions = [
@@ -41,7 +46,7 @@ export function ManualTimeEntry({ parties }: ManualTimeEntryProps) {
     }
 
     setLoading(true);
-    const result = await addEntry({
+    const result = await onLogTime({
       duration_minutes: totalMinutes,
       source: 'manual',
       category,
@@ -50,7 +55,8 @@ export function ManualTimeEntry({ parties }: ManualTimeEntryProps) {
     });
 
     if (result?.error) {
-      toast('Failed to log time', 'error');
+      const err = result.error as { message?: string };
+      toast(`Failed to log time: ${err.message || 'Unknown error'}`, 'error');
     } else {
       toast(`${totalMinutes} min logged!`, 'success');
       setHours(0);

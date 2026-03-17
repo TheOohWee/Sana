@@ -19,9 +19,8 @@ interface Party {
 
 export default function DashboardPage() {
   const { user, profile, loading: authLoading } = useAuth();
-  const { stats, heatmapData, loading: entriesLoading } = useTimeEntries();
+  const { stats, heatmapData, loading: entriesLoading, addEntry } = useTimeEntries();
   const [parties, setParties] = useState<Party[]>([]);
-  const [partiesLoading, setPartiesLoading] = useState(true);
   const supabase = createClient();
 
   useEffect(() => {
@@ -37,10 +36,9 @@ export default function DashboardPage() {
         .map((d) => (d as unknown as { parties: Party }).parties)
         .filter(Boolean);
       setParties(partyList);
-      setPartiesLoading(false);
     }
     fetchParties();
-  }, [user, supabase]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (authLoading) {
     return (
@@ -55,17 +53,14 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-8 animate-fade-in">
-      {/* Pomodoro Timer */}
       <Card>
-        <PomodoroTimer parties={parties} />
+        <PomodoroTimer parties={parties} onLogTime={addEntry} />
       </Card>
 
-      {/* Manual Time Entry */}
       <Card>
-        <ManualTimeEntry parties={parties} />
+        <ManualTimeEntry parties={parties} onLogTime={addEntry} />
       </Card>
 
-      {/* Stats */}
       <div>
         <h2 className="text-sm font-medium text-text-secondary mb-3">Your Progress</h2>
         <StatsCards
@@ -76,7 +71,6 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Heatmap */}
       <div>
         <h2 className="text-sm font-medium text-text-secondary mb-3">Activity</h2>
         <Card>
@@ -84,7 +78,6 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Win Badges */}
       {profile && (
         <div>
           <h2 className="text-sm font-medium text-text-secondary mb-3">Achievements</h2>

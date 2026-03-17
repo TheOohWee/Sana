@@ -7,7 +7,6 @@ import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
 import { Select } from './ui/Select';
 import { useTimer } from '@/hooks/useTimer';
-import { useTimeEntries } from '@/hooks/useTimeEntries';
 import { useToast } from './ui/Toast';
 import { formatTimerDisplay, requestNotificationPermission, cn } from '@/lib/utils';
 
@@ -18,11 +17,17 @@ interface Party {
 
 interface PomodoroTimerProps {
   parties: Party[];
+  onLogTime: (entry: {
+    duration_minutes: number;
+    note?: string;
+    source: 'pomodoro' | 'manual';
+    category?: string;
+    party_id?: string | null;
+  }) => Promise<{ data: unknown; error: unknown } | null | undefined>;
 }
 
-export function PomodoroTimer({ parties }: PomodoroTimerProps) {
+export function PomodoroTimer({ parties, onLogTime }: PomodoroTimerProps) {
   const { toast } = useToast();
-  const { addEntry } = useTimeEntries();
   const [showSettings, setShowSettings] = useState(false);
   const [selectedParty, setSelectedParty] = useState<string>('');
   const [tempWork, setTempWork] = useState('25');
@@ -36,7 +41,7 @@ export function PomodoroTimer({ parties }: PomodoroTimerProps) {
 
   const handleComplete = async (sessionType: 'work' | 'break', durationMinutes: number) => {
     if (sessionType === 'work') {
-      const result = await addEntry({
+      const result = await onLogTime({
         duration_minutes: durationMinutes,
         source: 'pomodoro',
         category: 'Focus session',
@@ -44,7 +49,8 @@ export function PomodoroTimer({ parties }: PomodoroTimerProps) {
       });
 
       if (result?.error) {
-        toast('Failed to log session', 'error');
+        const err = result.error as { message?: string };
+        toast(`Failed to log session: ${err.message || 'Unknown error'}`, 'error');
       } else {
         toast(`${durationMinutes} min focus session logged!`, 'success');
       }
@@ -110,7 +116,6 @@ export function PomodoroTimer({ parties }: PomodoroTimerProps) {
         </button>
       </div>
 
-      {/* Timer circle */}
       <div className="relative w-64 h-64 mb-6">
         <svg className="w-full h-full -rotate-90" viewBox="0 0 256 256">
           <circle
@@ -143,7 +148,6 @@ export function PomodoroTimer({ parties }: PomodoroTimerProps) {
         </div>
       </div>
 
-      {/* Controls */}
       <div className="flex items-center gap-3 mb-6">
         {timer.state === 'running' ? (
           <Button onClick={timer.pause} variant="secondary" size="lg" icon={<Pause className="h-5 w-5" />}>
@@ -159,7 +163,6 @@ export function PomodoroTimer({ parties }: PomodoroTimerProps) {
         </Button>
       </div>
 
-      {/* Party selector */}
       <div className="w-full max-w-xs">
         <Select
           label="Log time to"
@@ -169,7 +172,6 @@ export function PomodoroTimer({ parties }: PomodoroTimerProps) {
         />
       </div>
 
-      {/* Settings modal */}
       <Modal open={showSettings} onClose={() => setShowSettings(false)} title="Timer Settings">
         <div className="space-y-4">
           <Input
