@@ -11,9 +11,9 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { Tabs } from '@/components/ui/Tabs';
 import { useToast } from '@/components/ui/Toast';
 import { MapPin, Calendar, Clock, Crown, Flame, Trophy, UserPlus, UserCheck, UserX, Users } from 'lucide-react';
-import { formatMinutesLong, formatDate, formatMinutes, formatDateForDB } from '@/lib/utils';
+import { formatDate, formatMinutes, formatDateForDB } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 
@@ -40,47 +40,7 @@ export default function PublicProfilePage() {
 
   const isOwnProfile = user?.id === profile?.id;
 
-  // Check friendship status
-  useEffect(() => {
-    if (!profile?.id || !user || isOwnProfile) return;
-    getFriendshipStatus(profile.id).then(setFriendStatus);
-  }, [profile?.id, user, isOwnProfile, getFriendshipStatus]);
-
-  // Mutual friends count
-  const mutualFriendsCount = useMemo(() => {
-    if (isOwnProfile) return 0;
-    // This is a simplified count - in reality you'd want a server-side query
-    return 0;
-  }, [isOwnProfile]);
-
-  if (loading) {
-    return (
-      <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
-        <div className="flex items-center gap-4">
-          <Skeleton className="h-20 w-20 rounded-full" />
-          <div className="space-y-2">
-            <Skeleton className="h-6 w-40" />
-            <Skeleton className="h-4 w-24" />
-          </div>
-        </div>
-        <Skeleton className="h-20" />
-        <Skeleton className="h-40" />
-      </div>
-    );
-  }
-
-  if (error || !profile) {
-    return (
-      <div className="max-w-3xl mx-auto px-4 py-16 text-center">
-        <p className="text-text-secondary text-lg">User not found</p>
-      </div>
-    );
-  }
-
-  const totalHours = Math.floor(profile.total_focus_minutes / 60);
-  const totalMins = profile.total_focus_minutes % 60;
-  const totalWins = profile.daily_wins + profile.weekly_wins + profile.monthly_wins;
-
+  // All hooks MUST be above conditional returns
   const range = useMemo(() => {
     const now = new Date();
     const ymd = (d: Date) => formatDateForDB(d);
@@ -101,36 +61,13 @@ export default function PublicProfilePage() {
     return { start: ymd(start), end: ymd(end) };
   }, [period]);
 
-  async function handleFriendAction() {
-    if (!profile) return;
-    setFriendLoading(true);
+  // Check friendship status
+  useEffect(() => {
+    if (!profile?.id || !user || isOwnProfile) return;
+    getFriendshipStatus(profile.id).then(setFriendStatus);
+  }, [profile?.id, user, isOwnProfile, getFriendshipStatus]);
 
-    if (!friendStatus) {
-      const result = await sendRequest(profile.id);
-      if (!result.error) {
-        toast('Friend request sent!', 'success');
-        setFriendStatus({ id: '', status: 'pending', requester_id: user!.id });
-      } else {
-        toast('Failed to send request', 'error');
-      }
-    } else if (friendStatus.status === 'pending' && friendStatus.requester_id !== user?.id) {
-      const result = await acceptRequest(friendStatus.id);
-      if (!result.error) {
-        toast('Friend request accepted!', 'success');
-        setFriendStatus({ ...friendStatus, status: 'accepted' });
-      }
-    } else if (friendStatus.status === 'accepted') {
-      const result = await removeFriend(friendStatus.id);
-      if (!result.error) {
-        toast('Friend removed', 'info');
-        setFriendStatus(null);
-      }
-    }
-
-    setFriendLoading(false);
-  }
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
+  // Fetch party performance
   useEffect(() => {
     if (!profile?.id) return;
     let cancelled = false;
@@ -177,7 +114,66 @@ export default function PublicProfilePage() {
     })();
 
     return () => { cancelled = true; };
-  }, [profile.id, supabase, range.start, range.end]);
+  }, [profile?.id, range.start, range.end]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleFriendAction = useCallback(async () => {
+    if (!profile || !user) return;
+    setFriendLoading(true);
+
+    if (!friendStatus) {
+      const result = await sendRequest(profile.id);
+      if (!result.error) {
+        toast('Friend request sent!', 'success');
+        setFriendStatus({ id: '', status: 'pending', requester_id: user.id });
+      } else {
+        toast('Failed to send request', 'error');
+      }
+    } else if (friendStatus.status === 'pending' && friendStatus.requester_id !== user.id) {
+      const result = await acceptRequest(friendStatus.id);
+      if (!result.error) {
+        toast('Friend request accepted!', 'success');
+        setFriendStatus({ ...friendStatus, status: 'accepted' });
+      }
+    } else if (friendStatus.status === 'accepted') {
+      const result = await removeFriend(friendStatus.id);
+      if (!result.error) {
+        toast('Friend removed', 'info');
+        setFriendStatus(null);
+      }
+    }
+
+    setFriendLoading(false);
+  }, [profile, user, friendStatus, sendRequest, acceptRequest, removeFriend, toast]);
+
+  // --- Conditional returns AFTER all hooks ---
+
+  if (loading) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-20 w-20 rounded-full" />
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-40" />
+            <Skeleton className="h-4 w-24" />
+          </div>
+        </div>
+        <Skeleton className="h-20" />
+        <Skeleton className="h-40" />
+      </div>
+    );
+  }
+
+  if (error || !profile) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-16 text-center">
+        <p className="text-text-secondary text-lg">User not found</p>
+      </div>
+    );
+  }
+
+  const totalHours = Math.floor(profile.total_focus_minutes / 60);
+  const totalMins = profile.total_focus_minutes % 60;
+  const totalWins = profile.daily_wins + profile.weekly_wins + profile.monthly_wins;
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-6 animate-fade-in">

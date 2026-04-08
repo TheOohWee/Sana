@@ -16,7 +16,8 @@ import { Camera, Shield } from 'lucide-react';
 export default function SettingsPage() {
   const { profile, loading: authLoading, refreshProfile } = useAuth();
   const { toast } = useToast();
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [displayName, setDisplayName] = useState('');

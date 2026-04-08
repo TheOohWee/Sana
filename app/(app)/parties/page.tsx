@@ -93,7 +93,7 @@ export default function PartiesPage() {
     });
     setPendingInvites(pendingList);
     setLoading(false);
-  }, [user, supabase]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchParties();
@@ -117,7 +117,7 @@ export default function PartiesPage() {
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [user, supabase, fetchParties]);
+  }, [user, fetchParties]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
