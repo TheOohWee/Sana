@@ -70,6 +70,7 @@ export function useChat(partyId: string) {
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchMessages();
 
     const channel = supabase

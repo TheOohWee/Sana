@@ -113,6 +113,7 @@ export function useHabits() {
 
   useEffect(() => {
     if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       Promise.all([fetchHabits(), fetchEntries()]).then(() => setLoading(false));
     }
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps

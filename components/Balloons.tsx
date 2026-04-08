@@ -23,6 +23,7 @@ export function Balloons({ show, onComplete }: { show: boolean; onComplete?: () 
 
   useEffect(() => {
     if (!show) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setParticles([]);
       return;
     }

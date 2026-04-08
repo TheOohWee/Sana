@@ -17,6 +17,13 @@ export interface Friend {
   is_requester: boolean;
 }
 
+interface FriendshipRow {
+  id: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  addressee?: { id: string; username: string; display_name: string | null; avatar_url: string | null; total_focus_minutes: number; current_streak: number };
+  requester?: { id: string; username: string; display_name: string | null; avatar_url: string | null; total_focus_minutes: number; current_streak: number };
+}
+
 export function useFriends() {
   const { user } = useAuth();
   const supabaseRef = useRef(createClient());
@@ -43,7 +50,7 @@ export function useFriends() {
     const allFriends: Friend[] = [];
     const pending: Friend[] = [];
 
-    (sent || []).forEach((f: any) => {
+    (sent || []).forEach((f: FriendshipRow) => {
       const profile = f.addressee;
       if (!profile) return;
       const friend: Friend = {
@@ -62,7 +69,7 @@ export function useFriends() {
       else if (f.status === 'pending') pending.push(friend);
     });
 
-    (received || []).forEach((f: any) => {
+    (received || []).forEach((f: FriendshipRow) => {
       const profile = f.requester;
       if (!profile) return;
       const friend: Friend = {
@@ -133,6 +140,7 @@ export function useFriends() {
 
   useEffect(() => {
     if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       fetchFriends().then(() => setLoading(false));
     }
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps

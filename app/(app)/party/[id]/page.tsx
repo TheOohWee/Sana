@@ -128,6 +128,7 @@ export default function PartyDetailPage() {
 
   useEffect(() => {
     fetchParty();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchRecentEntries();
     fetchPartyDaily();
   }, [fetchParty, fetchRecentEntries, fetchPartyDaily]);
