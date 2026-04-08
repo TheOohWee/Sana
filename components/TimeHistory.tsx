@@ -76,6 +76,7 @@ export function TimeHistory({ entries, loading, onDelete }: TimeHistoryProps) {
       {entries.map((entry) => {
         const entryDate = formatDate(entry.date);
         const showDateHeader = entryDate !== lastDate;
+        // eslint-disable-next-line react-hooks/immutability
         lastDate = entryDate;
 
         return (

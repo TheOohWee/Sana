@@ -31,6 +31,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (profile) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDisplayName(profile.display_name || '');
       setUsername(profile.username);
       setBio(profile.bio || '');

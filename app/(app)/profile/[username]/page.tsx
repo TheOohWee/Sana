@@ -80,7 +80,7 @@ export default function PublicProfilePage() {
         .eq('user_id', profile.id)
         .eq('status', 'accepted');
 
-      const parties = (memberships || []).map((m) => (m as unknown as { parties: { id: string; name: string } }).parties).filter(Boolean);
+      const parties = (memberships || []).map((m: unknown) => (m as { parties: { id: string; name: string } }).parties).filter(Boolean);
 
       const results: { party_id: string; party_name: string; rank: number | null; total_minutes: number; member_count: number }[] = [];
 
@@ -98,7 +98,7 @@ export default function PublicProfilePage() {
             .eq('status', 'accepted'),
         ]);
 
-        const row = (ranking || []).find((r: any) => r.user_id === profile.id);
+        const row = (ranking || []).find((r: { user_id: string; rank: number; total_minutes: number }) => r.user_id === profile.id);
         results.push({
           party_id: p.id,
           party_name: p.name,
@@ -460,7 +460,7 @@ export default function PublicProfilePage() {
           ) : partyPerf.length === 0 ? (
             <div className="p-6 text-center">
               <p className="text-sm text-text-muted">No visible parties for this user</p>
-              <p className="text-xs text-text-muted mt-1">You'll only see parties you share with them (or your own).</p>
+              <p className="text-xs text-text-muted mt-1">You&apos;ll only see parties you share with them (or your own).</p>
             </div>
           ) : (
             partyPerf.map((p) => (

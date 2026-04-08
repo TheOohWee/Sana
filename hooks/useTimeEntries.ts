@@ -171,6 +171,7 @@ export function useTimeEntries() {
 
   useEffect(() => {
     if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       Promise.all([fetchEntries(), fetchStats(), fetchHeatmap()]).then(() => setLoading(false));
     }
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
