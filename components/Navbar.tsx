@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, Settings, LogOut, Target } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, LogOut, Target, Zap } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 import { Avatar } from './ui/Avatar';
 import { cn } from '@/lib/utils';
@@ -24,7 +24,7 @@ export function Navbar() {
         <div className="flex items-center gap-6">
           <Link href="/dashboard" className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-accent to-accent/60 flex items-center justify-center">
-              <span className="text-xs font-bold text-white">S</span>
+              <Zap className="h-3.5 w-3.5 text-white fill-white" />
             </div>
             <span className="text-lg font-bold tracking-tight text-text-primary">Sana</span>
           </Link>

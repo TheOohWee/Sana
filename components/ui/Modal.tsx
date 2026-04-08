@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -31,7 +32,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
       ref={overlayRef}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
@@ -41,7 +42,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
     >
       <div
         className={cn(
-          'w-full max-w-md rounded-xl border border-border-default bg-bg-secondary p-6 animate-slide-up',
+          'w-full max-w-md rounded-2xl border border-border-default bg-bg-secondary p-6 animate-slide-up',
           className
         )}
       >
@@ -49,13 +50,14 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
           <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-tertiary transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-tertiary transition-colors cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

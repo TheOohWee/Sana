@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { Zap } from 'lucide-react';
 
 function GithubIcon() {
   return (
@@ -32,8 +33,8 @@ export default function LoginPage() {
       <div className="rounded-2xl border border-border-default bg-bg-secondary p-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-accent/15 mb-4">
-            <span className="text-lg font-bold text-accent">S</span>
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-accent to-accent/60 mb-4">
+            <Zap className="h-5 w-5 text-white fill-white" />
           </div>
           <h1 className="text-xl font-semibold text-text-primary">Welcome to Sana</h1>
           <p className="text-sm text-text-muted mt-1">Focus together. Compete. Grow.</p>
