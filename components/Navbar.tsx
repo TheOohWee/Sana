@@ -22,8 +22,11 @@ export function Navbar() {
     <nav className="sticky top-0 z-40 border-b border-border-default bg-bg-primary/80 backdrop-blur-md">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <Link href="/dashboard" className="text-lg font-bold tracking-tight text-text-primary">
-            Sana
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-accent to-accent/60 flex items-center justify-center">
+              <span className="text-xs font-bold text-white">S</span>
+            </div>
+            <span className="text-lg font-bold tracking-tight text-text-primary">Sana</span>
           </Link>
           <div className="hidden sm:flex items-center gap-1">
             {navItems.map((item) => {
@@ -62,7 +65,7 @@ export function Navbar() {
           )}
           <button
             onClick={signOut}
-            className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-tertiary transition-colors cursor-pointer"
+            className="p-2 rounded-lg text-text-muted hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
             title="Sign out"
           >
             <LogOut className="h-4 w-4" />
@@ -71,7 +74,7 @@ export function Navbar() {
       </div>
 
       {/* Mobile bottom nav */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-border-default bg-bg-primary/95 backdrop-blur-md">
+      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 border-t border-border-default bg-bg-primary/95 backdrop-blur-md safe-area-bottom">
         <div className="flex items-center justify-around py-2">
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -81,7 +84,7 @@ export function Navbar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'flex flex-col items-center gap-1 px-4 py-1 text-xs transition-colors',
+                  'flex flex-col items-center gap-0.5 px-3 py-1 text-[10px] transition-colors',
                   isActive ? 'text-accent' : 'text-text-muted'
                 )}
               >
@@ -90,6 +93,13 @@ export function Navbar() {
               </Link>
             );
           })}
+          <button
+            onClick={signOut}
+            className="flex flex-col items-center gap-0.5 px-3 py-1 text-[10px] text-text-muted cursor-pointer"
+          >
+            <LogOut className="h-5 w-5" />
+            Exit
+          </button>
         </div>
       </div>
     </nav>

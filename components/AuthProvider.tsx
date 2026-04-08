@@ -27,7 +27,7 @@ type AuthContextType = {
   profile: Profile | null;
   loading: boolean;
   refreshProfile: () => Promise<void>;
-  signOut: () => Promise<void>;
+  signOut: () => void;
 };
 
 const AuthContext = createContext<AuthContextType>({
@@ -35,7 +35,7 @@ const AuthContext = createContext<AuthContextType>({
   profile: null,
   loading: true,
   refreshProfile: async () => {},
-  signOut: async () => {},
+  signOut: () => {},
 });
 
 export function useAuth() {
@@ -64,11 +64,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user, fetchProfile]);
 
-  const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
-    window.location.href = '/';
+  const signOut = useCallback(() => {
+    supabase.auth.signOut().then(() => {
+      setUser(null);
+      setProfile(null);
+      window.location.replace('/login');
+    });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

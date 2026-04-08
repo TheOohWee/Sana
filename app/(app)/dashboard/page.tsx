@@ -1,26 +1,19 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import dynamic from 'next/dynamic';
 import { useAuth } from '@/components/AuthProvider';
 import { PomodoroTimer } from '@/components/PomodoroTimer';
 import { ManualTimeEntry } from '@/components/ManualTimeEntry';
 import { StatsCards } from '@/components/StatsCards';
+import { ActivityHeatmap } from '@/components/ActivityHeatmap';
+import { WinBadges } from '@/components/WinBadges';
+import { Balloons } from '@/components/Balloons';
+import { TimeHistory } from '@/components/TimeHistory';
 import { useTimeEntries } from '@/hooks/useTimeEntries';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Card } from '@/components/ui/Card';
 import { useToast } from '@/components/ui/Toast';
-
-const ActivityHeatmap = dynamic(() => import('@/components/ActivityHeatmap').then(m => ({ default: m.ActivityHeatmap })), {
-  loading: () => <Skeleton className="h-40" />,
-});
-const WinBadges = dynamic(() => import('@/components/WinBadges').then(m => ({ default: m.WinBadges })), {
-  loading: () => <Skeleton className="h-20" />,
-});
-const Balloons = dynamic(() => import('@/components/Balloons').then(m => ({ default: m.Balloons })), { ssr: false });
-const TimeHistory = dynamic(() => import('@/components/TimeHistory').then(m => ({ default: m.TimeHistory })), {
-  loading: () => <Skeleton className="h-32" />,
-});
+import { Flame, Zap } from 'lucide-react';
 
 export default function DashboardPage() {
   const { profile, loading: authLoading } = useAuth();
@@ -62,6 +55,30 @@ export default function DashboardPage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-8 animate-fade-in">
       <Balloons show={showBalloons} onComplete={() => setShowBalloons(false)} />
+
+      {/* Welcome banner */}
+      {profile && (
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-accent/10 via-bg-secondary to-bg-secondary border border-accent/10 p-6">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-accent/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
+          <div className="relative">
+            <h1 className="text-xl font-semibold text-text-primary">
+              Welcome back, {profile.display_name || profile.username}
+            </h1>
+            <div className="flex items-center gap-4 mt-2">
+              {(profile.current_streak ?? 0) > 0 && (
+                <span className="inline-flex items-center gap-1.5 text-sm text-orange-400">
+                  <Flame className="h-4 w-4" />
+                  {profile.current_streak} day streak
+                </span>
+              )}
+              <span className="inline-flex items-center gap-1.5 text-sm text-accent">
+                <Zap className="h-4 w-4" />
+                {stats.today > 0 ? `${stats.today}m focused today` : 'Start focusing!'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Card>
         <PomodoroTimer onLogTime={handleLogTime} />

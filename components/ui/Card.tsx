@@ -8,8 +8,8 @@ export function Card({ children, className, hover = false, ...props }: CardProps
   return (
     <div
       className={cn(
-        'rounded-xl border border-border-default bg-bg-secondary p-4',
-        hover && 'hover:border-border-hover hover:bg-bg-tertiary transition-all duration-150 cursor-pointer',
+        'rounded-2xl border border-border-default bg-bg-secondary p-4',
+        hover && 'hover:border-border-hover hover:bg-bg-tertiary transition-all duration-200 cursor-pointer',
         className
       )}
       {...props}

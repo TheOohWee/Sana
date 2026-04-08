@@ -14,12 +14,8 @@ import { MapPin, Calendar, Clock, Crown, Flame, Trophy, UserPlus, UserCheck, Use
 import { formatDate, formatMinutes, formatDateForDB } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import dynamic from 'next/dynamic';
+import { ActivityHeatmap } from '@/components/ActivityHeatmap';
 import Link from 'next/link';
-
-const ActivityHeatmap = dynamic(() => import('@/components/ActivityHeatmap').then(m => ({ default: m.ActivityHeatmap })), {
-  loading: () => <Skeleton className="h-40" />,
-});
 
 export default function PublicProfilePage() {
   const params = useParams();
