@@ -72,7 +72,7 @@ export default function PartiesPage() {
       .eq('user_id', user.id)
       .eq('status', 'pending');
 
-    const pendingList: PendingInvite[] = (invites || []).map((inv) => {
+    const pendingList: PendingInvite[] = (invites || []).map((inv: unknown) => {
       const p = (inv as unknown as { 
         id: string; 
         party_id: string; 
