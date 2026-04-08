@@ -4,38 +4,27 @@ import { useState } from 'react';
 import { Plus, Minus, Clock } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Input } from './ui/Input';
-import { Select } from './ui/Select';
 import { useToast } from './ui/Toast';
 
-interface Party {
-  id: string;
-  name: string;
-}
-
 interface ManualTimeEntryProps {
-  parties: Party[];
   onLogTime: (entry: {
     duration_minutes: number;
-    note?: string;
     source: 'pomodoro' | 'manual';
     category?: string;
+    note?: string;
     party_id?: string | null;
   }) => Promise<{ data: unknown; error: unknown } | null | undefined>;
+  partyId?: string;
+  compact?: boolean;
 }
 
-export function ManualTimeEntry({ parties, onLogTime }: ManualTimeEntryProps) {
+export function ManualTimeEntry({ onLogTime, partyId, compact }: ManualTimeEntryProps) {
   const [hours, setHours] = useState(0);
   const [minutes, setMinutes] = useState(30);
   const [category, setCategory] = useState('');
   const [note, setNote] = useState('');
-  const [partyId, setPartyId] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-
-  const partyOptions = [
-    { value: '', label: 'Personal (no party)' },
-    ...parties.map((p) => ({ value: p.id, label: p.name })),
-  ];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -58,7 +47,6 @@ export function ManualTimeEntry({ parties, onLogTime }: ManualTimeEntryProps) {
       const err = result.error as { message?: string };
       toast(`Failed to log time: ${err.message || 'Unknown error'}`, 'error');
     } else {
-      toast(`${totalMinutes} min logged!`, 'success');
       setHours(0);
       setMinutes(30);
       setCategory('');
@@ -96,10 +84,12 @@ export function ManualTimeEntry({ parties, onLogTime }: ManualTimeEntryProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="flex items-center gap-2 text-text-secondary mb-2">
-        <Clock className="h-4 w-4" />
-        <span className="text-sm font-medium">Log Time Manually</span>
-      </div>
+      {!compact && (
+        <div className="flex items-center gap-2 text-text-secondary mb-2">
+          <Clock className="h-4 w-4" />
+          <span className="text-sm font-medium">Log Time Manually</span>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-end gap-4">
         <div>
@@ -119,7 +109,7 @@ export function ManualTimeEntry({ parties, onLogTime }: ManualTimeEntryProps) {
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-4">
+      <div className="flex flex-wrap items-end gap-4">
         <div className="flex-1 min-w-[180px]">
           <Input
             placeholder="Note (optional)"
@@ -127,18 +117,10 @@ export function ManualTimeEntry({ parties, onLogTime }: ManualTimeEntryProps) {
             onChange={(e) => setNote(e.target.value)}
           />
         </div>
-        <div className="w-48">
-          <Select
-            options={partyOptions}
-            value={partyId}
-            onChange={(e) => setPartyId(e.target.value)}
-          />
-        </div>
+        <Button type="submit" loading={loading} disabled={hours === 0 && minutes === 0}>
+          Log Time
+        </Button>
       </div>
-
-      <Button type="submit" loading={loading} disabled={hours === 0 && minutes === 0}>
-        Log Time
-      </Button>
     </form>
   );
 }

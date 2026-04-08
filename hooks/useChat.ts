@@ -18,19 +18,23 @@ interface Message {
 }
 
 export function useChat(partyId: string) {
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
   const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
-  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const fetchMessages = useCallback(async () => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('party_messages')
       .select('*, profiles(username, display_name, avatar_url)')
       .eq('party_id', partyId)
       .order('created_at', { ascending: true })
       .limit(200);
+
+    if (error) {
+      console.error('Chat fetch error:', error.message, error.details);
+    }
 
     setMessages(data || []);
     setLoading(false);
@@ -51,11 +55,16 @@ export function useChat(partyId: string) {
 
       setMessages((prev) => [...prev, optimisticMsg]);
 
-      await supabase.from('party_messages').insert({
+      const { error } = await supabase.from('party_messages').insert({
         party_id: partyId,
         user_id: user.id,
         content: content.trim(),
       });
+
+      if (error) {
+        console.error('Chat send error:', error.message, error.details);
+        setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+      }
     },
     [user, partyId, supabase]
   );
@@ -94,7 +103,7 @@ export function useChat(partyId: string) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [partyId, supabase, user, fetchMessages]);
+  }, [partyId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { messages, loading, sendMessage, scrollRef };
+  return { messages, loading, sendMessage };
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/components/AuthProvider';
@@ -8,15 +8,18 @@ import { createClient } from '@/lib/supabase/client';
 import { Ranking } from '@/components/Ranking';
 import { PartyChat } from '@/components/PartyChat';
 import { InviteModal } from '@/components/InviteModal';
+import { ManualTimeEntry } from '@/components/ManualTimeEntry';
+import { Balloons } from '@/components/Balloons';
 import { Card } from '@/components/ui/Card';
 import { Tabs } from '@/components/ui/Tabs';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { useToast } from '@/components/ui/Toast';
 import { usePartyRanking } from '@/hooks/usePartyRanking';
-import { formatMinutes, formatRelativeTime, cn } from '@/lib/utils';
-import { UserPlus, Settings, Clock, Users } from 'lucide-react';
+import { formatMinutes, formatRelativeTime, formatDateForDB, formatDate, cn } from '@/lib/utils';
+import { UserPlus, Settings, Users } from 'lucide-react';
 
 type Period = 'daily' | 'weekly' | 'monthly';
 
@@ -29,11 +32,12 @@ interface PartyDetail {
   invite_code: string;
 }
 
-interface TimeEntry {
+interface TimeEntryRow {
   id: string;
   user_id: string;
   duration_minutes: number;
   category: string;
+  note: string;
   source: string;
   created_at: string;
   profiles: {
@@ -47,17 +51,21 @@ export default function PartyDetailPage() {
   const params = useParams();
   const partyId = params.id as string;
   const { user } = useAuth();
-  const supabase = createClient();
+  const { toast } = useToast();
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
 
   const [party, setParty] = useState<PartyDetail | null>(null);
   const [memberCount, setMemberCount] = useState(0);
   const [period, setPeriod] = useState<Period>('daily');
   const [showInvite, setShowInvite] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [recentEntries, setRecentEntries] = useState<TimeEntry[]>([]);
+  const [recentEntries, setRecentEntries] = useState<TimeEntryRow[]>([]);
   const [activeTab, setActiveTab] = useState<'ranking' | 'chat' | 'log'>('ranking');
+  const [showBalloons, setShowBalloons] = useState(false);
+  const [partyDaily, setPartyDaily] = useState<{ date: string; total: number }[]>([]);
 
-  const { ranking, loading: rankingLoading } = usePartyRanking(partyId, period);
+  const { ranking, loading: rankingLoading, refresh: refreshRanking } = usePartyRanking(partyId, period);
 
   const fetchParty = useCallback(async () => {
     const { data: partyData } = await supabase
@@ -81,18 +89,84 @@ export default function PartyDetailPage() {
   const fetchRecentEntries = useCallback(async () => {
     const { data } = await supabase
       .from('time_entries')
-      .select('id, user_id, duration_minutes, category, source, created_at, profiles(username, display_name, avatar_url)')
+      .select('id, user_id, duration_minutes, category, note, source, created_at, profiles(username, display_name, avatar_url)')
       .eq('party_id', partyId)
       .order('created_at', { ascending: false })
       .limit(20);
 
-    setRecentEntries((data as unknown as TimeEntry[]) || []);
+    setRecentEntries((data as unknown as TimeEntryRow[]) || []);
+  }, [partyId, supabase]);
+
+  const fetchPartyDaily = useCallback(async () => {
+    const today = new Date();
+    const start = new Date(today);
+    start.setUTCDate(start.getUTCDate() - 13);
+    const startStr = formatDateForDB(start);
+    const endStr = formatDateForDB(today);
+
+    const { data } = await supabase
+      .from('time_entries')
+      .select('date, duration_minutes')
+      .eq('party_id', partyId)
+      .gte('date', startStr)
+      .lte('date', endStr);
+
+    const map = new Map<string, number>();
+    (data || []).forEach((r: { date: string; duration_minutes: number }) => {
+      map.set(r.date, (map.get(r.date) || 0) + r.duration_minutes);
+    });
+
+    const days: { date: string; total: number }[] = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(today);
+      d.setUTCDate(d.getUTCDate() - i);
+      const key = formatDateForDB(d);
+      days.push({ date: key, total: map.get(key) || 0 });
+    }
+    setPartyDaily(days);
   }, [partyId, supabase]);
 
   useEffect(() => {
     fetchParty();
     fetchRecentEntries();
+    fetchPartyDaily();
   }, [fetchParty, fetchRecentEntries]);
+
+  const handleLogTime = useCallback(async (entry: {
+    duration_minutes: number;
+    source: 'pomodoro' | 'manual';
+    category?: string;
+    note?: string;
+    party_id?: string | null;
+  }) => {
+    if (!user) return { data: null, error: { message: 'Not authenticated' } };
+
+    const { data, error } = await supabase
+      .from('time_entries')
+      .insert({
+        user_id: user.id,
+        party_id: partyId,
+        duration_minutes: entry.duration_minutes,
+        note: entry.note || '',
+        source: entry.source,
+        category: entry.category || '',
+        date: formatDateForDB(new Date()),
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Party time log error:', error.message);
+      return { data: null, error };
+    }
+
+    setShowBalloons(true);
+    toast(`${entry.duration_minutes} min logged to ${party?.name}!`, 'success');
+    fetchRecentEntries();
+    fetchPartyDaily();
+    refreshRanking();
+    return { data, error: null };
+  }, [user, partyId, supabase, party?.name, toast, fetchRecentEntries, refreshRanking]);
 
   if (loading) {
     return (
@@ -116,8 +190,50 @@ export default function PartyDetailPage() {
 
   const isOwner = party.created_by === user?.id;
 
+  const activityList = (maxH: string) => (
+    <div className={`divide-y divide-border-default ${maxH} overflow-y-auto`}>
+      {recentEntries.length === 0 ? (
+        <div className="text-center py-8">
+          <p className="text-sm text-text-muted">No activity yet</p>
+        </div>
+      ) : (
+        recentEntries.map((entry) => (
+          <div key={entry.id} className="flex items-center gap-3 px-4 py-3">
+            <Avatar src={entry.profiles?.avatar_url} size="sm" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-text-primary">
+                {entry.profiles?.display_name || entry.profiles?.username}
+              </p>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-xs text-text-muted">
+                  {formatMinutes(entry.duration_minutes)}
+                </span>
+                {entry.category && (
+                  <span className="text-xs text-text-muted">· {entry.category}</span>
+                )}
+                <Badge variant={entry.source === 'pomodoro' ? 'accent' : 'default'}>
+                  {entry.source === 'pomodoro' ? 'Pomodoro' : 'Manual'}
+                </Badge>
+              </div>
+              {entry.note && (
+                <p className="text-xs text-text-muted mt-1 truncate">{entry.note}</p>
+              )}
+            </div>
+            <span className="text-xs text-text-muted">
+              {formatRelativeTime(entry.created_at)}
+            </span>
+          </div>
+        ))
+      )}
+    </div>
+  );
+
+  const maxDaily = Math.max(1, ...partyDaily.map((d) => d.total));
+
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 animate-fade-in">
+      <Balloons show={showBalloons} onComplete={() => setShowBalloons(false)} />
+
       {/* Top Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
@@ -132,12 +248,7 @@ export default function PartyDetailPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => setShowInvite(true)}
-            icon={<UserPlus className="h-4 w-4" />}
-          >
+          <Button size="sm" variant="secondary" onClick={() => setShowInvite(true)} icon={<UserPlus className="h-4 w-4" />}>
             Invite
           </Button>
           {isOwner && (
@@ -149,6 +260,33 @@ export default function PartyDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Log time for this party */}
+      <Card className="mb-6">
+        <ManualTimeEntry onLogTime={handleLogTime} partyId={partyId} compact />
+      </Card>
+
+      {/* Party activity bar (last 14 days) */}
+      <Card className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-medium text-text-secondary">Party Activity</h2>
+          <span className="text-xs text-text-muted">Last 14 days</span>
+        </div>
+        <div className="flex items-end gap-1 h-16">
+          {partyDaily.map((d) => (
+            <div key={d.date} className="flex-1 group relative">
+              <div
+                className={cn(
+                  'w-full rounded-sm transition-colors',
+                  d.total === 0 ? 'bg-bg-tertiary' : 'bg-success/70 group-hover:bg-success'
+                )}
+                style={{ height: `${Math.max(3, Math.round((d.total / maxDaily) * 100))}%` }}
+                title={`${formatDate(d.date)} — ${d.total} min`}
+              />
+            </div>
+          ))}
+        </div>
+      </Card>
 
       {/* Period Tabs */}
       <Tabs
@@ -184,11 +322,7 @@ export default function PartyDetailPage() {
               <h2 className="text-sm font-medium text-text-secondary">Leaderboard</h2>
             </div>
             <div className="p-3">
-              <Ranking
-                entries={ranking}
-                currentUserId={user?.id}
-                loading={rankingLoading}
-              />
+              <Ranking entries={ranking} currentUserId={user?.id} loading={rankingLoading} />
             </div>
           </Card>
 
@@ -198,38 +332,7 @@ export default function PartyDetailPage() {
               <div className="p-4 border-b border-border-default">
                 <h2 className="text-sm font-medium text-text-secondary">Recent Activity</h2>
               </div>
-              <div className="divide-y divide-border-default max-h-80 overflow-y-auto">
-                {recentEntries.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-sm text-text-muted">No activity yet</p>
-                  </div>
-                ) : (
-                  recentEntries.map((entry) => (
-                    <div key={entry.id} className="flex items-center gap-3 px-4 py-3">
-                      <Avatar src={entry.profiles?.avatar_url} size="sm" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-text-primary">
-                          {entry.profiles?.display_name || entry.profiles?.username}
-                        </p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs text-text-muted">
-                            {formatMinutes(entry.duration_minutes)}
-                          </span>
-                          {entry.category && (
-                            <span className="text-xs text-text-muted">· {entry.category}</span>
-                          )}
-                          <Badge variant={entry.source === 'pomodoro' ? 'accent' : 'default'}>
-                            {entry.source === 'pomodoro' ? 'Pomodoro' : 'Manual'}
-                          </Badge>
-                        </div>
-                      </div>
-                      <span className="text-xs text-text-muted">
-                        {formatRelativeTime(entry.created_at)}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
+              {activityList('max-h-80')}
             </Card>
           </div>
         </div>
@@ -252,38 +355,7 @@ export default function PartyDetailPage() {
             <div className="p-4 border-b border-border-default">
               <h2 className="text-sm font-medium text-text-secondary">Recent Activity</h2>
             </div>
-            <div className="divide-y divide-border-default max-h-96 overflow-y-auto">
-              {recentEntries.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-sm text-text-muted">No activity yet</p>
-                </div>
-              ) : (
-                recentEntries.map((entry) => (
-                  <div key={entry.id} className="flex items-center gap-3 px-4 py-3">
-                    <Avatar src={entry.profiles?.avatar_url} size="sm" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-text-primary">
-                        {entry.profiles?.display_name || entry.profiles?.username}
-                      </p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-xs text-text-muted">
-                          {formatMinutes(entry.duration_minutes)}
-                        </span>
-                        {entry.category && (
-                          <span className="text-xs text-text-muted">· {entry.category}</span>
-                        )}
-                        <Badge variant={entry.source === 'pomodoro' ? 'accent' : 'default'}>
-                          {entry.source === 'pomodoro' ? 'Pomodoro' : 'Manual'}
-                        </Badge>
-                      </div>
-                    </div>
-                    <span className="text-xs text-text-muted">
-                      {formatRelativeTime(entry.created_at)}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
+            {activityList('max-h-96')}
           </Card>
         </div>
       </div>

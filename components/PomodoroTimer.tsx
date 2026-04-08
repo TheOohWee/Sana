@@ -5,38 +5,26 @@ import { Play, Pause, RotateCcw, Settings as SettingsIcon } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Modal } from './ui/Modal';
 import { Input } from './ui/Input';
-import { Select } from './ui/Select';
 import { useTimer } from '@/hooks/useTimer';
 import { useToast } from './ui/Toast';
 import { formatTimerDisplay, requestNotificationPermission, cn } from '@/lib/utils';
 
-interface Party {
-  id: string;
-  name: string;
-}
-
 interface PomodoroTimerProps {
-  parties: Party[];
   onLogTime: (entry: {
     duration_minutes: number;
-    note?: string;
     source: 'pomodoro' | 'manual';
     category?: string;
-    party_id?: string | null;
   }) => Promise<{ data: unknown; error: unknown } | null | undefined>;
 }
 
-export function PomodoroTimer({ parties, onLogTime }: PomodoroTimerProps) {
+export function PomodoroTimer({ onLogTime }: PomodoroTimerProps) {
   const { toast } = useToast();
   const [showSettings, setShowSettings] = useState(false);
-  const [selectedParty, setSelectedParty] = useState<string>('');
   const [tempWork, setTempWork] = useState('25');
   const [tempBreak, setTempBreak] = useState('5');
 
   useEffect(() => {
     requestNotificationPermission();
-    const stored = localStorage.getItem('sana_selected_party');
-    if (stored) setSelectedParty(stored);
   }, []);
 
   const handleComplete = async (sessionType: 'work' | 'break', durationMinutes: number) => {
@@ -45,29 +33,16 @@ export function PomodoroTimer({ parties, onLogTime }: PomodoroTimerProps) {
         duration_minutes: durationMinutes,
         source: 'pomodoro',
         category: 'Focus session',
-        party_id: selectedParty || null,
       });
 
       if (result?.error) {
         const err = result.error as { message?: string };
         toast(`Failed to log session: ${err.message || 'Unknown error'}`, 'error');
-      } else {
-        toast(`${durationMinutes} min focus session logged!`, 'success');
       }
     }
   };
 
   const timer = useTimer(handleComplete);
-
-  const partyOptions = [
-    { value: '', label: 'Personal (no party)' },
-    ...parties.map((p) => ({ value: p.id, label: p.name })),
-  ];
-
-  function handlePartyChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    setSelectedParty(e.target.value);
-    localStorage.setItem('sana_selected_party', e.target.value);
-  }
 
   function handleSaveSettings() {
     const work = Math.max(1, Math.min(120, parseInt(tempWork) || 25));
@@ -118,25 +93,13 @@ export function PomodoroTimer({ parties, onLogTime }: PomodoroTimerProps) {
 
       <div className="relative w-64 h-64 mb-6">
         <svg className="w-full h-full -rotate-90" viewBox="0 0 256 256">
-          <circle
-            cx="128"
-            cy="128"
-            r="120"
-            fill="none"
-            stroke="#1A1A1E"
-            strokeWidth="4"
-          />
+          <circle cx="128" cy="128" r="120" fill="none" stroke="#1A1A1E" strokeWidth="4" />
           {timer.state !== 'idle' && (
             <circle
-              cx="128"
-              cy="128"
-              r="120"
-              fill="none"
+              cx="128" cy="128" r="120" fill="none"
               stroke={timer.sessionType === 'work' ? '#6C63FF' : '#22C55E'}
-              strokeWidth="4"
-              strokeLinecap="round"
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
+              strokeWidth="4" strokeLinecap="round"
+              strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
               className="transition-[stroke-dashoffset] duration-1000 ease-linear"
             />
           )}
@@ -163,36 +126,11 @@ export function PomodoroTimer({ parties, onLogTime }: PomodoroTimerProps) {
         </Button>
       </div>
 
-      <div className="w-full max-w-xs">
-        <Select
-          label="Log time to"
-          options={partyOptions}
-          value={selectedParty}
-          onChange={handlePartyChange}
-        />
-      </div>
-
       <Modal open={showSettings} onClose={() => setShowSettings(false)} title="Timer Settings">
         <div className="space-y-4">
-          <Input
-            label="Focus duration (minutes)"
-            type="number"
-            min="1"
-            max="120"
-            value={tempWork}
-            onChange={(e) => setTempWork(e.target.value)}
-          />
-          <Input
-            label="Break duration (minutes)"
-            type="number"
-            min="1"
-            max="60"
-            value={tempBreak}
-            onChange={(e) => setTempBreak(e.target.value)}
-          />
-          <Button onClick={handleSaveSettings} className="w-full">
-            Save
-          </Button>
+          <Input label="Focus duration (minutes)" type="number" min="1" max="120" value={tempWork} onChange={(e) => setTempWork(e.target.value)} />
+          <Input label="Break duration (minutes)" type="number" min="1" max="60" value={tempBreak} onChange={(e) => setTempBreak(e.target.value)} />
+          <Button onClick={handleSaveSettings} className="w-full">Save</Button>
         </div>
       </Modal>
     </div>

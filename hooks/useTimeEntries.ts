@@ -159,6 +159,29 @@ export function useTimeEntries() {
     [user, supabase, fetchStats, fetchHeatmap]
   );
 
+  const deleteEntry = useCallback(
+    async (entryId: string) => {
+      if (!user) return { error: { message: 'Not authenticated' } };
+
+      const { error } = await supabase
+        .from('time_entries')
+        .delete()
+        .eq('id', entryId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('deleteEntry error:', error.message);
+        return { error };
+      }
+
+      setEntries((prev) => prev.filter((e) => e.id !== entryId));
+      fetchStats();
+      fetchHeatmap();
+      return { error: null };
+    },
+    [user, supabase, fetchStats, fetchHeatmap]
+  );
+
   useEffect(() => {
     if (user) {
       fetchEntries();
@@ -167,5 +190,5 @@ export function useTimeEntries() {
     }
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { entries, stats, heatmapData, loading, addEntry, refresh: fetchEntries };
+  return { entries, stats, heatmapData, loading, addEntry, deleteEntry, refresh: fetchEntries };
 }

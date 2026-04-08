@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { useChat } from '@/hooks/useChat';
 import { useAuth } from './AuthProvider';
 import { Avatar } from './ui/Avatar';
@@ -60,19 +61,31 @@ export function PartyChat({ partyId }: PartyChatProps) {
             ? (profile?.display_name || profile?.username || 'You')
             : (msg.profiles?.display_name || msg.profiles?.username || 'Unknown');
           const avatarUrl = isOwn ? profile?.avatar_url : msg.profiles?.avatar_url;
+          const username = isOwn ? profile?.username : msg.profiles?.username;
 
           return (
             <div key={msg.id} className="flex gap-2.5">
-              <Avatar
-                src={avatarUrl}
-                size="sm"
-                alt={displayName}
-              />
+              {username ? (
+                <Link href={`/profile/${username}`} className="shrink-0">
+                  <Avatar src={avatarUrl} size="sm" alt={displayName} />
+                </Link>
+              ) : (
+                <Avatar src={avatarUrl} size="sm" alt={displayName} />
+              )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-sm font-medium text-text-primary">
-                    {displayName}
-                  </span>
+                  {username ? (
+                    <Link
+                      href={`/profile/${username}`}
+                      className="text-sm font-medium text-text-primary hover:underline"
+                    >
+                      {displayName}
+                    </Link>
+                  ) : (
+                    <span className="text-sm font-medium text-text-primary">
+                      {displayName}
+                    </span>
+                  )}
                   <span className="text-xs text-text-muted">
                     {formatRelativeTime(msg.created_at)}
                   </span>

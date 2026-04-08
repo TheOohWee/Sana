@@ -373,20 +373,63 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Trigger to update total_focus_minutes on profile when time entry is added
+-- Keep profiles.total_focus_minutes consistent with time_entries
+-- Handles INSERT/DELETE/UPDATE, including user transfers.
 CREATE OR REPLACE FUNCTION update_total_focus_minutes()
 RETURNS TRIGGER AS $$
 BEGIN
-  UPDATE profiles
-  SET total_focus_minutes = total_focus_minutes + NEW.duration_minutes,
-      updated_at = NOW()
-  WHERE id = NEW.user_id;
-  RETURN NEW;
+  IF TG_OP = 'INSERT' THEN
+    UPDATE profiles
+    SET total_focus_minutes = total_focus_minutes + NEW.duration_minutes,
+        updated_at = NOW()
+    WHERE id = NEW.user_id;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    UPDATE profiles
+    SET total_focus_minutes = GREATEST(0, total_focus_minutes - OLD.duration_minutes),
+        updated_at = NOW()
+    WHERE id = OLD.user_id;
+    RETURN OLD;
+  ELSIF TG_OP = 'UPDATE' THEN
+    IF NEW.user_id = OLD.user_id THEN
+      UPDATE profiles
+      SET total_focus_minutes = GREATEST(0, total_focus_minutes + (NEW.duration_minutes - OLD.duration_minutes)),
+          updated_at = NOW()
+      WHERE id = NEW.user_id;
+    ELSE
+      UPDATE profiles
+      SET total_focus_minutes = GREATEST(0, total_focus_minutes - OLD.duration_minutes),
+          updated_at = NOW()
+      WHERE id = OLD.user_id;
+
+      UPDATE profiles
+      SET total_focus_minutes = total_focus_minutes + NEW.duration_minutes,
+          updated_at = NOW()
+      WHERE id = NEW.user_id;
+    END IF;
+    RETURN NEW;
+  END IF;
+
+  RETURN NULL;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS on_time_entry_insert ON time_entries;
+DROP TRIGGER IF EXISTS on_time_entry_delete ON time_entries;
+DROP TRIGGER IF EXISTS on_time_entry_update ON time_entries;
+
 CREATE TRIGGER on_time_entry_insert
   AFTER INSERT ON time_entries
+  FOR EACH ROW
+  EXECUTE FUNCTION update_total_focus_minutes();
+
+CREATE TRIGGER on_time_entry_delete
+  AFTER DELETE ON time_entries
+  FOR EACH ROW
+  EXECUTE FUNCTION update_total_focus_minutes();
+
+CREATE TRIGGER on_time_entry_update
+  AFTER UPDATE OF duration_minutes, user_id ON time_entries
   FOR EACH ROW
   EXECUTE FUNCTION update_total_focus_minutes();
 
