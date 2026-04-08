@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Button } from '@/components/ui/Button';
-import { APP_NAME, APP_TAGLINE } from '@/lib/constants';
+import { APP_NAME } from '@/lib/constants';
 
 type Provider = 'github' | 'google' | 'apple';
 
@@ -35,9 +34,16 @@ function AppleIcon() {
 }
 
 const providers: { id: Provider; label: string; icon: React.FC }[] = [
-  { id: 'github', label: 'Continue with GitHub', icon: GithubIcon },
-  { id: 'google', label: 'Continue with Google', icon: GoogleIcon },
   { id: 'apple', label: 'Continue with Apple', icon: AppleIcon },
+  { id: 'google', label: 'Continue with Google', icon: GoogleIcon },
+  { id: 'github', label: 'Continue with GitHub', icon: GithubIcon },
+];
+
+const features = [
+  { text: 'Focus Timer', delay: '0.6s' },
+  { text: 'Habit Tracking', delay: '0.7s' },
+  { text: 'Compete with Friends', delay: '0.8s' },
+  { text: 'Streak Rewards', delay: '0.9s' },
 ];
 
 export default function LoginPage() {
@@ -58,36 +64,74 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="w-full max-w-sm animate-fade-in">
-      <div className="text-center mb-10">
-        <h1 className="text-5xl font-bold tracking-tight text-text-primary mb-3">
-          {APP_NAME}
-        </h1>
-        <p className="text-text-secondary text-lg">
-          {APP_TAGLINE}
+    <div className="w-full max-w-md px-6">
+      {/* Ambient glow */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-accent/[0.04] blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[400px] h-[400px] rounded-full bg-accent/[0.03] blur-[100px]" />
+      </div>
+
+      <div className="relative z-10">
+        {/* Logo + Hero */}
+        <div className="text-center mb-12 hero-stagger">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-accent/20 to-accent/5 border border-accent/10 mb-8 hero-item">
+            <span className="text-2xl font-bold text-accent">{APP_NAME.charAt(0)}</span>
+          </div>
+
+          <h1 className="text-5xl sm:text-6xl font-bold tracking-tight text-text-primary mb-4 hero-item">
+            {APP_NAME}
+          </h1>
+
+          <p className="text-lg sm:text-xl text-text-secondary font-light leading-relaxed hero-item">
+            Focus together.<br />
+            <span className="text-text-muted">Compete. Grow.</span>
+          </p>
+        </div>
+
+        {/* Feature pills */}
+        <div className="flex flex-wrap justify-center gap-2 mb-10">
+          {features.map((f) => (
+            <span
+              key={f.text}
+              className="px-3 py-1 rounded-full text-xs font-medium text-text-secondary bg-bg-secondary border border-border-default hero-pill"
+              style={{ animationDelay: f.delay }}
+            >
+              {f.text}
+            </span>
+          ))}
+        </div>
+
+        {/* Sign in buttons */}
+        <div className="space-y-3 hero-item" style={{ animationDelay: '0.5s' }}>
+          {providers.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => handleSignIn(id)}
+              disabled={loading !== null}
+              className="w-full flex items-center justify-center gap-3 px-6 py-3.5 rounded-2xl text-[15px] font-medium transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-bg-secondary/80 backdrop-blur-sm border border-border-default text-text-primary hover:bg-bg-tertiary hover:border-border-hover hover:scale-[1.01] active:scale-[0.99]"
+            >
+              {loading === id ? (
+                <div className="h-5 w-5 border-2 border-text-muted border-t-text-primary rounded-full animate-spin" />
+              ) : (
+                <Icon />
+              )}
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* Divider */}
+        <div className="mt-10 mb-6 flex items-center gap-4 hero-item" style={{ animationDelay: '0.7s' }}>
+          <div className="flex-1 h-px bg-border-default" />
+          <span className="text-xs text-text-muted">Your productivity, amplified</span>
+          <div className="flex-1 h-px bg-border-default" />
+        </div>
+
+        {/* Footer */}
+        <p className="text-center text-[11px] text-text-muted/60 leading-relaxed hero-item" style={{ animationDelay: '0.8s' }}>
+          By signing in, you agree to our Terms of Service and Privacy Policy.
         </p>
       </div>
-
-      <div className="space-y-3">
-        {providers.map(({ id, label, icon: Icon }) => (
-          <Button
-            key={id}
-            variant="outline"
-            size="lg"
-            className="w-full justify-center gap-3"
-            onClick={() => handleSignIn(id)}
-            loading={loading === id}
-            disabled={loading !== null}
-            icon={<Icon />}
-          >
-            {label}
-          </Button>
-        ))}
-      </div>
-
-      <p className="mt-8 text-center text-xs text-text-muted">
-        By signing in, you agree to our Terms of Service and Privacy Policy.
-      </p>
     </div>
   );
 }

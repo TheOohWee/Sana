@@ -77,6 +77,35 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Hero stagger animations */
+@keyframes hero-enter {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes hero-pill-enter {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.hero-stagger .hero-item {
+  opacity: 0;
+  animation: hero-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.hero-stagger .hero-item:nth-child(1) { animation-delay: 0.1s; }
+.hero-stagger .hero-item:nth-child(2) { animation-delay: 0.25s; }
+.hero-stagger .hero-item:nth-child(3) { animation-delay: 0.4s; }
+
+.hero-item {
+  opacity: 0;
+  animation: hero-enter 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.hero-pill {
+  opacity: 0;
+  animation: hero-pill-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;

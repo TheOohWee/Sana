@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, LogOut, Target } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 import { Avatar } from './ui/Avatar';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/habits', label: 'Habits', icon: Target },
   { href: '/parties', label: 'Parties', icon: Users },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
