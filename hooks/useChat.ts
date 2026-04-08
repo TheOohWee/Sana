@@ -82,7 +82,7 @@ export function useChat(partyId: string) {
           table: 'party_messages',
           filter: `party_id=eq.${partyId}`,
         },
-        async (payload) => {
+        async (payload: { new: Message }) => {
           const newMsg = payload.new as Message;
           if (newMsg.user_id === user?.id) return;
 

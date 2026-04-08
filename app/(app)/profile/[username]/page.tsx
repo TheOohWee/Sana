@@ -80,7 +80,7 @@ export default function PublicProfilePage() {
         .eq('user_id', profile.id)
         .eq('status', 'accepted');
 
-      const parties = (memberships || []).map((m) => (m as unknown as { parties: { id: string; name: string } }).parties).filter(Boolean);
+      const parties = (memberships || []).map((m: unknown) => (m as { parties: { id: string; name: string } }).parties).filter(Boolean);
 
       const results: { party_id: string; party_name: string; rank: number | null; total_minutes: number; member_count: number }[] = [];
 
