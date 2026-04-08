@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 
 interface Profile {
@@ -21,12 +21,13 @@ interface Profile {
 }
 
 export function usePublicProfile(username: string) {
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetch = useCallback(async () => {
+  const fetchProfile = useCallback(async () => {
     setLoading(true);
     const { data, error: err } = await supabase
       .from('profiles')
@@ -40,17 +41,18 @@ export function usePublicProfile(username: string) {
       setProfile(data);
     }
     setLoading(false);
-  }, [username, supabase]);
+  }, [username]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    fetch();
-  }, [fetch]);
+    fetchProfile();
+  }, [fetchProfile]);
 
   return { profile, loading, error };
 }
 
 export function useUserHeatmap(userId: string | undefined) {
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
   const [data, setData] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
@@ -64,8 +66,8 @@ export function useUserHeatmap(userId: string | undefined) {
 
       const { data: result } = await supabase.rpc('get_user_heatmap', {
         p_user_id: userId,
-        p_start_date: today.toISOString().split('T')[0],
-        p_end_date: yearAgo.toISOString().split('T')[0],
+        p_start_date: yearAgo.toISOString().split('T')[0],
+        p_end_date: today.toISOString().split('T')[0],
       });
 
       const map: Record<string, number> = {};
@@ -77,7 +79,7 @@ export function useUserHeatmap(userId: string | undefined) {
     };
 
     fetchData();
-  }, [userId, supabase]);
+  }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { data, loading };
 }

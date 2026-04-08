@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { formatDateForDB, getDateRangeForPeriod } from '@/lib/utils';
 
@@ -16,7 +16,8 @@ interface RankingEntry {
 type Period = 'daily' | 'weekly' | 'monthly';
 
 export function usePartyRanking(partyId: string, period: Period) {
-  const supabase = createClient();
+  const supabaseRef = useRef(createClient());
+  const supabase = supabaseRef.current;
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -33,7 +34,7 @@ export function usePartyRanking(partyId: string, period: Period) {
       setRanking(data);
     }
     setLoading(false);
-  }, [partyId, period, supabase]);
+  }, [partyId, period]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchRanking();
@@ -57,7 +58,7 @@ export function usePartyRanking(partyId: string, period: Period) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [partyId, period, supabase, fetchRanking]);
+  }, [partyId, period, fetchRanking]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { ranking, loading, refresh: fetchRanking };
 }

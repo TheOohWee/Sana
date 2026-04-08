@@ -84,7 +84,7 @@ export default function PartyDetailPage() {
 
     setMemberCount(count || 0);
     setLoading(false);
-  }, [partyId, supabase]);
+  }, [partyId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchRecentEntries = useCallback(async () => {
     const { data } = await supabase
@@ -95,7 +95,7 @@ export default function PartyDetailPage() {
       .limit(20);
 
     setRecentEntries((data as unknown as TimeEntryRow[]) || []);
-  }, [partyId, supabase]);
+  }, [partyId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchPartyDaily = useCallback(async () => {
     const today = new Date();
@@ -124,13 +124,13 @@ export default function PartyDetailPage() {
       days.push({ date: key, total: map.get(key) || 0 });
     }
     setPartyDaily(days);
-  }, [partyId, supabase]);
+  }, [partyId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     fetchParty();
     fetchRecentEntries();
     fetchPartyDaily();
-  }, [fetchParty, fetchRecentEntries]);
+  }, [fetchParty, fetchRecentEntries, fetchPartyDaily]);
 
   const handleLogTime = useCallback(async (entry: {
     duration_minutes: number;
@@ -166,7 +166,7 @@ export default function PartyDetailPage() {
     fetchPartyDaily();
     refreshRanking();
     return { data, error: null };
-  }, [user, partyId, supabase, party?.name, toast, fetchRecentEntries, refreshRanking]);
+  }, [user, partyId, party?.name, toast, fetchRecentEntries, fetchPartyDaily, refreshRanking]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) {
     return (
