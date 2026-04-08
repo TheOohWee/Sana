@@ -495,6 +495,136 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
 -- These are configured via the Supabase Dashboard under Storage → Policies
 
 -- ============================================
+-- 7. HABITS
+-- ============================================
+
+CREATE TABLE habits (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  icon TEXT DEFAULT '🎯',
+  color TEXT DEFAULT '#6C63FF',
+  frequency TEXT DEFAULT 'daily' CHECK (frequency IN ('daily', 'weekly')),
+  target_count INTEGER DEFAULT 1,
+  archived BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE habit_entries (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  habit_id UUID REFERENCES habits(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  date DATE DEFAULT CURRENT_DATE,
+  count INTEGER DEFAULT 1,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(habit_id, date)
+);
+
+CREATE INDEX idx_habits_user ON habits(user_id);
+CREATE INDEX idx_habit_entries_habit_date ON habit_entries(habit_id, date);
+CREATE INDEX idx_habit_entries_user_date ON habit_entries(user_id, date);
+
+ALTER TABLE habits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE habit_entries ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own habits"
+  ON habits FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own habits"
+  ON habits FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can update own habits"
+  ON habits FOR UPDATE USING (auth.uid() = user_id);
+CREATE POLICY "Users can delete own habits"
+  ON habits FOR DELETE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can view own habit entries"
+  ON habit_entries FOR SELECT USING (auth.uid() = user_id);
+CREATE POLICY "Users can insert own habit entries"
+  ON habit_entries FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own habit entries"
+  ON habit_entries FOR DELETE USING (auth.uid() = user_id);
+
+-- ============================================
+-- 8. FRIENDSHIPS
+-- ============================================
+
+CREATE TABLE friendships (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  requester_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  addressee_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected')),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(requester_id, addressee_id)
+);
+
+CREATE INDEX idx_friendships_requester ON friendships(requester_id);
+CREATE INDEX idx_friendships_addressee ON friendships(addressee_id);
+
+ALTER TABLE friendships ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own friendships"
+  ON friendships FOR SELECT
+  USING (auth.uid() = requester_id OR auth.uid() = addressee_id);
+CREATE POLICY "Users can send friend requests"
+  ON friendships FOR INSERT
+  WITH CHECK (auth.uid() = requester_id);
+CREATE POLICY "Users can update friendships addressed to them"
+  ON friendships FOR UPDATE
+  USING (auth.uid() = addressee_id);
+CREATE POLICY "Users can delete own friendships"
+  ON friendships FOR DELETE
+  USING (auth.uid() = requester_id OR auth.uid() = addressee_id);
+
+-- ============================================
+-- STREAKS (add to profiles)
+-- ============================================
+
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS current_streak INTEGER DEFAULT 0;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS longest_streak INTEGER DEFAULT 0;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS last_active_date DATE;
+
+-- Function to update streaks when time entries are logged
+CREATE OR REPLACE FUNCTION update_user_streak()
+RETURNS TRIGGER AS $$
+DECLARE
+  v_last_date DATE;
+  v_current INTEGER;
+  v_longest INTEGER;
+BEGIN
+  SELECT last_active_date, current_streak, longest_streak
+  INTO v_last_date, v_current, v_longest
+  FROM profiles WHERE id = NEW.user_id;
+
+  IF v_last_date IS NULL OR NEW.date > v_last_date + 1 THEN
+    v_current := 1;
+  ELSIF NEW.date = v_last_date + 1 THEN
+    v_current := v_current + 1;
+  ELSIF NEW.date = v_last_date THEN
+    -- same day, no change
+    RETURN NEW;
+  ELSE
+    RETURN NEW;
+  END IF;
+
+  IF v_current > v_longest THEN
+    v_longest := v_current;
+  END IF;
+
+  UPDATE profiles
+  SET current_streak = v_current,
+      longest_streak = v_longest,
+      last_active_date = GREATEST(COALESCE(v_last_date, NEW.date), NEW.date)
+  WHERE id = NEW.user_id;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER on_time_entry_streak
+  AFTER INSERT ON time_entries
+  FOR EACH ROW
+  EXECUTE FUNCTION update_user_streak();
+
+-- ============================================
 -- REALTIME
 -- ============================================
 -- Enable realtime on these tables via Supabase Dashboard:

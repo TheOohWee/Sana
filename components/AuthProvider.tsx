@@ -16,6 +16,9 @@ type Profile = {
   daily_wins: number;
   weekly_wins: number;
   monthly_wins: number;
+  current_streak: number;
+  longest_streak: number;
+  last_active_date: string | null;
   created_at: string;
 };
 
