@@ -504,7 +504,8 @@ CREATE TABLE habits (
   name TEXT NOT NULL,
   icon TEXT DEFAULT '🎯',
   color TEXT DEFAULT '#6C63FF',
-  frequency TEXT DEFAULT 'daily' CHECK (frequency IN ('daily', 'weekly')),
+  frequency TEXT DEFAULT 'daily' CHECK (frequency IN ('daily', 'weekly', 'monthly')),
+  frequency_days INTEGER[] DEFAULT '{0,1,2,3,4,5,6}',
   target_count INTEGER DEFAULT 1,
   archived BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -623,6 +624,13 @@ CREATE TRIGGER on_time_entry_streak
   AFTER INSERT ON time_entries
   FOR EACH ROW
   EXECUTE FUNCTION update_user_streak();
+
+-- ============================================
+-- PATCH: If habits table already exists, run these to add new columns
+-- ============================================
+-- ALTER TABLE habits DROP CONSTRAINT IF EXISTS habits_frequency_check;
+-- ALTER TABLE habits ADD CONSTRAINT habits_frequency_check CHECK (frequency IN ('daily', 'weekly', 'monthly'));
+-- ALTER TABLE habits ADD COLUMN IF NOT EXISTS frequency_days INTEGER[] DEFAULT '{0,1,2,3,4,5,6}';
 
 -- ============================================
 -- REALTIME

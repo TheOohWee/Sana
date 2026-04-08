@@ -11,7 +11,7 @@ import { Card } from '@/components/ui/Card';
 import { useToast } from '@/components/ui/Toast';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { USERNAME_REGEX } from '@/lib/constants';
-import { Camera, Shield } from 'lucide-react';
+import { Camera } from 'lucide-react';
 
 export default function SettingsPage() {
   const { profile, loading: authLoading, refreshProfile } = useAuth();
@@ -199,52 +199,6 @@ export default function SettingsPage() {
             onChange={(e) => setLocation(e.target.value)}
             placeholder="e.g., Almaty, Kazakhstan"
           />
-        </Card>
-
-        {/* 2FA */}
-        <Card className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Shield className="h-5 w-5 text-text-secondary" />
-            <div>
-              <p className="text-sm font-medium text-text-primary">Two-Factor Authentication</p>
-              <p className="text-xs text-text-muted">
-                Add an extra layer of security via authenticator app
-              </p>
-            </div>
-          </div>
-          <Button
-            type="button"
-            variant={profile?.two_factor_enabled ? 'danger' : 'secondary'}
-            size="sm"
-            onClick={async () => {
-              try {
-                if (profile?.two_factor_enabled) {
-                  const { error } = await supabase.auth.mfa.unenroll({
-                    factorId: (await supabase.auth.mfa.listFactors()).data?.totp?.[0]?.id || '',
-                  });
-                  if (!error) {
-                    await supabase.from('profiles').update({ two_factor_enabled: false }).eq('id', profile.id);
-                    await refreshProfile();
-                    toast('2FA disabled', 'info');
-                  }
-                } else {
-                  const { data, error } = await supabase.auth.mfa.enroll({
-                    factorType: 'totp',
-                    friendlyName: 'Sana Auth',
-                  });
-                  if (data && !error) {
-                    const qrUri = data.totp.uri;
-                    window.open(qrUri, '_blank');
-                    toast('Scan the QR code with your authenticator app, then verify below.', 'info');
-                  }
-                }
-              } catch {
-                toast('2FA operation failed', 'error');
-              }
-            }}
-          >
-            {profile?.two_factor_enabled ? 'Disable' : 'Enable'}
-          </Button>
         </Card>
 
         <Button type="submit" loading={saving} size="lg" className="w-full">

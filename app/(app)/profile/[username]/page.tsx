@@ -296,33 +296,41 @@ export default function PublicProfilePage() {
         </div>
       </div>
 
-      {/* Friends section (only on own profile) */}
-      {isOwnProfile && friends.length > 0 && (
+      {/* Friends section (own profile always, others only if has friends) */}
+      {(isOwnProfile || friends.length > 0) && (
         <div>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-medium text-text-secondary">Friends</h2>
-            <span className="text-xs text-text-muted">{friends.length} friends</span>
+            <span className="text-xs text-text-muted">{friends.length} friend{friends.length !== 1 ? 's' : ''}</span>
           </div>
-          <Card className="p-3">
-            <div className="flex flex-wrap gap-3">
-              {friends.slice(0, 8).map(f => (
-                <Link key={f.id} href={`/profile/${f.username}`} className="flex flex-col items-center gap-1 group">
-                  <Avatar src={f.avatar_url} size="md" />
-                  <span className="text-[10px] text-text-muted group-hover:text-text-primary transition-colors truncate max-w-[56px]">
-                    {f.display_name || f.username}
-                  </span>
-                </Link>
-              ))}
-              {friends.length > 8 && (
-                <div className="flex flex-col items-center gap-1">
-                  <div className="w-10 h-10 rounded-full bg-bg-tertiary border border-border-default flex items-center justify-center">
-                    <Users className="h-4 w-4 text-text-muted" />
+          {friends.length === 0 ? (
+            <Card className="text-center py-8">
+              <Users className="h-8 w-8 text-text-muted mx-auto mb-2" />
+              <p className="text-sm text-text-secondary">No friends yet</p>
+              <p className="text-xs text-text-muted mt-1">Visit other profiles and send friend requests to connect</p>
+            </Card>
+          ) : (
+            <Card className="p-3">
+              <div className="flex flex-wrap gap-3">
+                {friends.slice(0, 8).map(f => (
+                  <Link key={f.id} href={`/profile/${f.username}`} className="flex flex-col items-center gap-1 group">
+                    <Avatar src={f.avatar_url} size="md" />
+                    <span className="text-[10px] text-text-muted group-hover:text-text-primary transition-colors truncate max-w-[56px]">
+                      {f.display_name || f.username}
+                    </span>
+                  </Link>
+                ))}
+                {friends.length > 8 && (
+                  <div className="flex flex-col items-center gap-1">
+                    <div className="w-10 h-10 rounded-full bg-bg-tertiary border border-border-default flex items-center justify-center">
+                      <Users className="h-4 w-4 text-text-muted" />
+                    </div>
+                    <span className="text-[10px] text-text-muted">+{friends.length - 8}</span>
                   </div>
-                  <span className="text-[10px] text-text-muted">+{friends.length - 8}</span>
-                </div>
-              )}
-            </div>
-          </Card>
+                )}
+              </div>
+            </Card>
+          )}
         </div>
       )}
 

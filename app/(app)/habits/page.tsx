@@ -10,7 +10,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useToast } from '@/components/ui/Toast';
 import { formatDateForDB } from '@/lib/utils';
-import { Plus, Check, Trash2, Flame } from 'lucide-react';
+import { Plus, Check, Trash2, Flame, CalendarDays } from 'lucide-react';
 
 const HABIT_ICONS = ['🎯', '📚', '💪', '🧘', '💧', '🏃', '✍️', '🎨', '🎵', '💻', '🌅', '😴'];
 const HABIT_COLORS = ['#6C63FF', '#22C55E', '#F59E0B', '#EF4444', '#EC4899', '#06B6D4', '#8B5CF6', '#F97316'];
@@ -38,6 +38,8 @@ export default function HabitsPage() {
   const [newName, setNewName] = useState('');
   const [newIcon, setNewIcon] = useState('🎯');
   const [newColor, setNewColor] = useState('#6C63FF');
+  const [newFrequency, setNewFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [newDays, setNewDays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
   const [creating, setCreating] = useState(false);
 
   const days = getLast7Days();
@@ -72,7 +74,8 @@ export default function HabitsPage() {
       name: newName.trim(),
       icon: newIcon,
       color: newColor,
-      frequency: 'daily',
+      frequency: newFrequency,
+      frequency_days: newFrequency === 'daily' ? [0, 1, 2, 3, 4, 5, 6] : newDays,
       target_count: 1,
     });
     if (result?.data) {
@@ -81,6 +84,13 @@ export default function HabitsPage() {
       setNewName('');
       setNewIcon('🎯');
       setNewColor('#6C63FF');
+      setNewFrequency('daily');
+      setNewDays([0, 1, 2, 3, 4, 5, 6]);
+    } else if (result?.error) {
+      const msg = result.error.message?.includes('relation')
+        ? 'Habits table not found — run the migration in Supabase SQL Editor'
+        : 'Failed to create habit';
+      toast(msg, 'error');
     } else {
       toast('Failed to create habit', 'error');
     }
@@ -164,12 +174,22 @@ export default function HabitsPage() {
                     <span className="text-xl shrink-0">{habit.icon}</span>
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-text-primary truncate">{habit.name}</p>
-                      {streak > 0 && (
-                        <p className="text-xs text-text-muted flex items-center gap-1 mt-0.5">
-                          <Flame className="h-3 w-3 text-orange-400" />
-                          {streak} day streak
-                        </p>
-                      )}
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {streak > 0 && (
+                          <span className="text-xs text-text-muted flex items-center gap-1">
+                            <Flame className="h-3 w-3 text-orange-400" />
+                            {streak} day streak
+                          </span>
+                        )}
+                        {habit.frequency !== 'daily' && (
+                          <span className="text-xs text-text-muted flex items-center gap-1">
+                            <CalendarDays className="h-3 w-3" />
+                            {habit.frequency === 'weekly'
+                              ? `${(habit.frequency_days || []).map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d]).join(', ')}`
+                              : 'Monthly'}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <button
@@ -258,6 +278,61 @@ export default function HabitsPage() {
               ))}
             </div>
           </div>
+
+          {/* Frequency */}
+          <div>
+            <label className="block text-sm font-medium text-text-secondary mb-2">Frequency</label>
+            <div className="flex gap-2">
+              {(['daily', 'weekly', 'monthly'] as const).map(freq => (
+                <button
+                  key={freq}
+                  type="button"
+                  onClick={() => {
+                    setNewFrequency(freq);
+                    if (freq === 'daily') setNewDays([0, 1, 2, 3, 4, 5, 6]);
+                    else if (freq === 'weekly') setNewDays([1, 2, 3, 4, 5]);
+                  }}
+                  className={`flex-1 px-3 py-2 rounded-xl text-sm font-medium transition-all cursor-pointer ${
+                    newFrequency === freq
+                      ? 'bg-accent/20 text-accent ring-1 ring-accent/40'
+                      : 'bg-bg-tertiary text-text-secondary hover:bg-border-default'
+                  }`}
+                >
+                  {freq.charAt(0).toUpperCase() + freq.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Day picker (for weekly) */}
+          {newFrequency === 'weekly' && (
+            <div>
+              <label className="block text-sm font-medium text-text-secondary mb-2">On these days</label>
+              <div className="flex gap-1.5">
+                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((label, i) => {
+                  const selected = newDays.includes(i);
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => {
+                        setNewDays(prev =>
+                          prev.includes(i) ? prev.filter(d => d !== i) : [...prev, i].sort()
+                        );
+                      }}
+                      className={`w-9 h-9 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+                        selected
+                          ? 'bg-accent text-white'
+                          : 'bg-bg-tertiary text-text-muted hover:bg-border-default'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <Button onClick={handleCreate} loading={creating} className="w-full" size="lg">
             Create Habit

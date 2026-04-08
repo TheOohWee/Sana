@@ -11,7 +11,8 @@ export interface Habit {
   name: string;
   icon: string;
   color: string;
-  frequency: 'daily' | 'weekly';
+  frequency: 'daily' | 'weekly' | 'monthly';
+  frequency_days: number[];
   target_count: number;
   archived: boolean;
   created_at: string;
@@ -59,7 +60,7 @@ export function useHabits() {
     setEntries(data || []);
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const addHabit = useCallback(async (habit: { name: string; icon: string; color: string; frequency: 'daily' | 'weekly'; target_count: number }) => {
+  const addHabit = useCallback(async (habit: { name: string; icon: string; color: string; frequency: 'daily' | 'weekly' | 'monthly'; frequency_days: number[]; target_count: number }) => {
     if (!user) return null;
     const { data, error } = await supabase
       .from('habits')
