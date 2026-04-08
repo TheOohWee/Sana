@@ -10,10 +10,11 @@ import { Modal } from '@/components/ui/Modal';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useToast } from '@/components/ui/Toast';
 import { formatDateForDB } from '@/lib/utils';
+import { Balloons } from '@/components/Balloons';
 import { Plus, Check, Trash2, Flame, CalendarDays } from 'lucide-react';
 
 const HABIT_ICONS = ['🎯', '📚', '💪', '🧘', '💧', '🏃', '✍️', '🎨', '🎵', '💻', '🌅', '😴'];
-const HABIT_COLORS = ['#6C63FF', '#22C55E', '#F59E0B', '#EF4444', '#EC4899', '#06B6D4', '#8B5CF6', '#F97316'];
+const HABIT_COLORS = ['#22C55E', '#4ADE80', '#F59E0B', '#EF4444', '#EC4899', '#06B6D4', '#8B5CF6', '#F97316'];
 
 function getLast7Days(): { date: string; label: string; isToday: boolean }[] {
   const days = [];
@@ -37,10 +38,11 @@ export default function HabitsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState('');
   const [newIcon, setNewIcon] = useState('🎯');
-  const [newColor, setNewColor] = useState('#6C63FF');
+  const [newColor, setNewColor] = useState('#22C55E');
   const [newFrequency, setNewFrequency] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [newDays, setNewDays] = useState<number[]>([0, 1, 2, 3, 4, 5, 6]);
   const [creating, setCreating] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   const days = getLast7Days();
 
@@ -68,30 +70,34 @@ export default function HabitsPage() {
   }
 
   async function handleCreate() {
-    if (!newName.trim()) return;
+    if (!newName.trim()) {
+      toast('Please enter a habit name', 'error');
+      return;
+    }
     setCreating(true);
-    const result = await addHabit({
-      name: newName.trim(),
-      icon: newIcon,
-      color: newColor,
-      frequency: newFrequency,
-      frequency_days: newFrequency === 'daily' ? [0, 1, 2, 3, 4, 5, 6] : newDays,
-      target_count: 1,
-    });
-    if (result?.data) {
-      toast('Habit created!', 'success');
-      setShowCreate(false);
-      setNewName('');
-      setNewIcon('🎯');
-      setNewColor('#6C63FF');
-      setNewFrequency('daily');
-      setNewDays([0, 1, 2, 3, 4, 5, 6]);
-    } else if (result?.error) {
-      const msg = result.error.message?.includes('relation')
-        ? 'Habits table not found — run the migration in Supabase SQL Editor'
-        : 'Failed to create habit';
-      toast(msg, 'error');
-    } else {
+    try {
+      const result = await addHabit({
+        name: newName.trim(),
+        icon: newIcon,
+        color: newColor,
+        frequency: newFrequency,
+        frequency_days: newFrequency === 'daily' ? [0, 1, 2, 3, 4, 5, 6] : newDays,
+        target_count: 1,
+      });
+      if (result?.data) {
+        toast('Habit created!', 'success');
+        setShowConfetti(true);
+        setShowCreate(false);
+        setNewName('');
+        setNewIcon('🎯');
+        setNewColor('#22C55E');
+        setNewFrequency('daily');
+        setNewDays([0, 1, 2, 3, 4, 5, 6]);
+      } else {
+        const msg = (result?.error as { message?: string })?.message || 'Failed to create habit';
+        toast(msg, 'error');
+      }
+    } catch {
       toast('Failed to create habit', 'error');
     }
     setCreating(false);
@@ -113,6 +119,8 @@ export default function HabitsPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 animate-fade-in">
+      <Balloons show={showConfetti} onComplete={() => setShowConfetti(false)} />
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -207,7 +215,11 @@ export default function HabitsPage() {
                     return (
                       <button
                         key={day.date}
-                        onClick={() => toggleEntry(habit.id, day.date)}
+                        onClick={() => {
+                          const wasCompleted = getCompletionForDay(habit.id, day.date);
+                          toggleEntry(habit.id, day.date);
+                          if (!wasCompleted) setShowConfetti(true);
+                        }}
                         className="flex flex-col items-center gap-1 cursor-pointer group"
                       >
                         <span className={`text-[10px] ${day.isToday ? 'text-accent font-semibold' : 'text-text-muted'}`}>

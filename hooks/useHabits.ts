@@ -61,18 +61,32 @@ export function useHabits() {
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addHabit = useCallback(async (habit: { name: string; icon: string; color: string; frequency: 'daily' | 'weekly' | 'monthly'; frequency_days: number[]; target_count: number }) => {
-    if (!user) return null;
-    const { data, error } = await supabase
-      .from('habits')
-      .insert({ ...habit, user_id: user.id, archived: false })
-      .select()
-      .single();
-    if (error) {
-      console.error('addHabit error:', error.message, error.details, error.hint);
-      return { data: null, error };
+    if (!user) return { data: null, error: { message: 'Not authenticated' } };
+    try {
+      const { data, error } = await supabase
+        .from('habits')
+        .insert({
+          user_id: user.id,
+          name: habit.name,
+          icon: habit.icon,
+          color: habit.color,
+          frequency: habit.frequency,
+          frequency_days: habit.frequency_days,
+          target_count: habit.target_count,
+          archived: false,
+        })
+        .select()
+        .single();
+      if (error) {
+        console.error('addHabit error:', error.message, error.details, error.hint);
+        return { data: null, error };
+      }
+      if (data) setHabits(prev => [...prev, data]);
+      return { data, error: null };
+    } catch (err) {
+      console.error('addHabit exception:', err);
+      return { data: null, error: { message: 'Unexpected error creating habit' } };
     }
-    if (data) setHabits(prev => [...prev, data]);
-    return { data, error: null };
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const deleteHabit = useCallback(async (habitId: string) => {

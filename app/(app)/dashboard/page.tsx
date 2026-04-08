@@ -1,19 +1,27 @@
 'use client';
 
 import { useState, useCallback } from 'react';
+import dynamic from 'next/dynamic';
 import { useAuth } from '@/components/AuthProvider';
 import { PomodoroTimer } from '@/components/PomodoroTimer';
 import { ManualTimeEntry } from '@/components/ManualTimeEntry';
 import { StatsCards } from '@/components/StatsCards';
-import { ActivityHeatmap } from '@/components/ActivityHeatmap';
-import { WinBadges } from '@/components/WinBadges';
 import { Balloons } from '@/components/Balloons';
-import { TimeHistory } from '@/components/TimeHistory';
 import { useTimeEntries } from '@/hooks/useTimeEntries';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Card } from '@/components/ui/Card';
 import { useToast } from '@/components/ui/Toast';
 import { Flame, Zap } from 'lucide-react';
+
+const ActivityHeatmap = dynamic(() => import('@/components/ActivityHeatmap').then(m => ({ default: m.ActivityHeatmap })), {
+  loading: () => <Skeleton className="h-32" />,
+});
+const WinBadges = dynamic(() => import('@/components/WinBadges').then(m => ({ default: m.WinBadges })), {
+  loading: () => <Skeleton className="h-20" />,
+});
+const TimeHistory = dynamic(() => import('@/components/TimeHistory').then(m => ({ default: m.TimeHistory })), {
+  loading: () => <Skeleton className="h-32" />,
+});
 
 export default function DashboardPage() {
   const { profile, loading: authLoading } = useAuth();

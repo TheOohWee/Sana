@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-const COLORS = ['#6C63FF', '#22C55E', '#F59E0B', '#EF4444', '#EC4899', '#06B6D4', '#8B5CF6', '#FFD700'];
+const COLORS = ['#22C55E', '#4ADE80', '#F59E0B', '#EF4444', '#EC4899', '#06B6D4', '#8B5CF6', '#FFD700'];
 const SHAPES = ['square', 'circle', 'strip'] as const;
 
 interface Particle {

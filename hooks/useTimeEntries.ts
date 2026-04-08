@@ -42,39 +42,28 @@ export function useTimeEntries() {
 
     const today = new Date();
     const todayStr = formatDateForDB(today);
-    const weekStart = formatDateForDB(startOfWeek(today, { weekStartsOn: 1 }));
-    const weekEnd = formatDateForDB(endOfWeek(today, { weekStartsOn: 1 }));
     const monthStart = formatDateForDB(startOfMonth(today));
     const monthEnd = formatDateForDB(endOfMonth(today));
 
-    const [todayRes, weekRes, monthRes] = await Promise.all([
-      supabase
-        .from('time_entries')
-        .select('duration_minutes')
-        .eq('user_id', user.id)
-        .eq('date', todayStr),
-      supabase
-        .from('time_entries')
-        .select('duration_minutes')
-        .eq('user_id', user.id)
-        .gte('date', weekStart)
-        .lte('date', weekEnd),
-      supabase
-        .from('time_entries')
-        .select('duration_minutes')
-        .eq('user_id', user.id)
-        .gte('date', monthStart)
-        .lte('date', monthEnd),
-    ]);
+    // Single query for the whole month, compute today/week/month client-side
+    const { data: monthData } = await supabase
+      .from('time_entries')
+      .select('duration_minutes, date')
+      .eq('user_id', user.id)
+      .gte('date', monthStart)
+      .lte('date', monthEnd);
 
-    const sum = (data: { duration_minutes: number }[] | null) =>
-      (data || []).reduce((acc, e) => acc + e.duration_minutes, 0);
+    const weekStart = formatDateForDB(startOfWeek(today, { weekStartsOn: 1 }));
+    const weekEnd = formatDateForDB(endOfWeek(today, { weekStartsOn: 1 }));
 
-    setStats({
-      today: sum(todayRes.data),
-      week: sum(weekRes.data),
-      month: sum(monthRes.data),
-    });
+    let todayTotal = 0, weekTotal = 0, monthTotal = 0;
+    for (const e of monthData || []) {
+      monthTotal += e.duration_minutes;
+      if (e.date === todayStr) todayTotal += e.duration_minutes;
+      if (e.date >= weekStart && e.date <= weekEnd) weekTotal += e.duration_minutes;
+    }
+
+    setStats({ today: todayTotal, week: weekTotal, month: monthTotal });
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchHeatmap = useCallback(async () => {
@@ -103,7 +92,6 @@ export function useTimeEntries() {
 
   const fetchEntries = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
 
     const { data } = await supabase
       .from('time_entries')
@@ -113,7 +101,6 @@ export function useTimeEntries() {
       .limit(50);
 
     setEntries(data || []);
-    setLoading(false);
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addEntry = useCallback(
@@ -184,9 +171,7 @@ export function useTimeEntries() {
 
   useEffect(() => {
     if (user) {
-      fetchEntries();
-      fetchStats();
-      fetchHeatmap();
+      Promise.all([fetchEntries(), fetchStats(), fetchHeatmap()]).then(() => setLoading(false));
     }
   }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 

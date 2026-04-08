@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Zap, Timer, Users, Trophy } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 
 function GithubIcon() {
   return (
@@ -11,12 +11,6 @@ function GithubIcon() {
     </svg>
   );
 }
-
-const features = [
-  { icon: Timer, label: 'Focus Timer', desc: 'Track deep work sessions' },
-  { icon: Users, label: 'Parties', desc: 'Compete with friends' },
-  { icon: Trophy, label: 'Leaderboards', desc: 'Climb the ranks' },
-];
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -35,41 +29,21 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="w-full max-w-sm hero-stagger">
-      {/* Ambient glow */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-accent/[0.04] blur-[120px] pointer-events-none" />
-
-      <div className="relative space-y-8">
+    <div className="w-full max-w-xs hero-stagger">
+      <div className="relative space-y-6">
         {/* Logo & heading */}
         <div className="text-center hero-item">
-          <Zap className="h-8 w-8 text-accent mx-auto mb-4" />
-          <h1 className="text-2xl font-semibold text-text-primary tracking-tight">
+          <div className="w-12 h-12 mx-auto mb-5 rounded-2xl bg-success/10 flex items-center justify-center glow-green">
+            <Sparkles className="h-6 w-6 text-success" />
+          </div>
+          <h1 className="text-xl font-semibold text-text-primary tracking-tight">
             Welcome to Sana
           </h1>
-          <p className="text-sm text-text-muted mt-2">Focus together. Compete. Grow.</p>
+          <p className="text-xs text-text-muted mt-1.5">Focus together. Compete. Grow.</p>
         </div>
 
-        {/* Feature pills */}
-        <div className="flex justify-center gap-2 hero-item" style={{ animationDelay: '0.2s' }}>
-          {features.map((f) => {
-            const Icon = f.icon;
-            return (
-              <div
-                key={f.label}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-bg-secondary border border-border-default"
-              >
-                <Icon className="h-3.5 w-3.5 text-accent" />
-                <div className="text-left">
-                  <p className="text-[11px] font-medium text-text-primary leading-tight">{f.label}</p>
-                  <p className="text-[10px] text-text-muted leading-tight">{f.desc}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Sign in card */}
-        <div className="hero-item rounded-2xl border border-border-default bg-bg-secondary p-6" style={{ animationDelay: '0.35s' }}>
+        {/* Sign in button */}
+        <div className="hero-item" style={{ animationDelay: '0.2s' }}>
           <button
             onClick={handleSignIn}
             disabled={loading}
@@ -83,15 +57,10 @@ export default function LoginPage() {
             Continue with GitHub
           </button>
 
-          <p className="mt-4 text-center text-[11px] text-text-muted leading-relaxed">
+          <p className="mt-4 text-center text-[10px] text-text-muted leading-relaxed">
             By signing in, you agree to our Terms of Service and Privacy Policy.
           </p>
         </div>
-
-        {/* Social proof */}
-        <p className="text-center text-xs text-text-muted hero-item" style={{ animationDelay: '0.5s' }}>
-          Join students and makers tracking their focus
-        </p>
       </div>
     </div>
   );

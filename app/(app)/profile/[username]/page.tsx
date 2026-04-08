@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Tabs } from '@/components/ui/Tabs';
 import { useToast } from '@/components/ui/Toast';
-import { MapPin, Calendar, Clock, Crown, Flame, Trophy, UserPlus, UserCheck, UserX, Users } from 'lucide-react';
+import { MapPin, Calendar, Clock, Crown, Flame, Trophy, UserPlus, UserCheck, UserX, Users, Search } from 'lucide-react';
 import { formatDate, formatMinutes, formatDateForDB } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
@@ -23,7 +23,7 @@ export default function PublicProfilePage() {
   const { profile, loading, error } = usePublicProfile(username);
   const { data: heatmapData, loading: heatmapLoading } = useUserHeatmap(profile?.id);
   const { user } = useAuth();
-  const { friends, sendRequest, getFriendshipStatus, acceptRequest, removeFriend } = useFriends();
+  const { friends, pendingRequests, sendRequest, getFriendshipStatus, acceptRequest, rejectRequest, removeFriend } = useFriends();
   const { toast } = useToast();
   const supabaseRef = useRef(createClient());
   const supabase = supabaseRef.current;
@@ -33,6 +33,10 @@ export default function PublicProfilePage() {
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [friendStatus, setFriendStatus] = useState<{ id: string; status: string; requester_id: string } | null>(null);
   const [friendLoading, setFriendLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<{ id: string; username: string; display_name: string | null; avatar_url: string | null }[]>([]);
+  const [searching, setSearching] = useState(false);
+  const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isOwnProfile = user?.id === profile?.id;
 
@@ -140,6 +144,36 @@ export default function PublicProfilePage() {
 
     setFriendLoading(false);
   }, [profile, user, friendStatus, sendRequest, acceptRequest, removeFriend, toast]);
+
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    searchTimeout.current = setTimeout(async () => {
+      setSearching(true);
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, username, display_name, avatar_url')
+        .or(`username.ilike.%${query.trim()}%,display_name.ilike.%${query.trim()}%`)
+        .neq('id', user?.id || '')
+        .limit(6);
+      setSearchResults(data || []);
+      setSearching(false);
+    }, 300);
+  }, [user?.id, supabase]);
+
+  const handleAddFromSearch = useCallback(async (userId: string) => {
+    const result = await sendRequest(userId);
+    if (!result.error) {
+      toast('Friend request sent!', 'success');
+      setSearchResults(prev => prev.filter(u => u.id !== userId));
+    } else {
+      toast('Failed to send request', 'error');
+    }
+  }, [sendRequest, toast]);
 
   // --- Conditional returns AFTER all hooks ---
 
@@ -303,13 +337,80 @@ export default function PublicProfilePage() {
             <h2 className="text-sm font-medium text-text-secondary">Friends</h2>
             <span className="text-xs text-text-muted">{friends.length} friend{friends.length !== 1 ? 's' : ''}</span>
           </div>
-          {friends.length === 0 ? (
+
+          {/* Search to add friends (own profile only) */}
+          {isOwnProfile && (
+            <div className="mb-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  placeholder="Search users to add..."
+                  className="w-full pl-9 pr-3 py-2 rounded-xl border border-border-default bg-bg-secondary text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent/50"
+                />
+              </div>
+              {searchQuery.trim() && (
+                <Card className="mt-2 p-0 divide-y divide-border-default">
+                  {searching ? (
+                    <div className="px-4 py-3 text-xs text-text-muted">Searching...</div>
+                  ) : searchResults.length === 0 ? (
+                    <div className="px-4 py-3 text-xs text-text-muted">No users found</div>
+                  ) : (
+                    searchResults.map(u => (
+                      <div key={u.id} className="px-4 py-2.5 flex items-center justify-between">
+                        <Link href={`/profile/${u.username}`} className="flex items-center gap-2.5 min-w-0">
+                          <Avatar src={u.avatar_url} size="sm" />
+                          <div className="min-w-0">
+                            <p className="text-sm text-text-primary truncate">{u.display_name || u.username}</p>
+                            <p className="text-[10px] text-text-muted">@{u.username}</p>
+                          </div>
+                        </Link>
+                        <Button size="sm" onClick={() => handleAddFromSearch(u.id)} icon={<UserPlus className="h-3.5 w-3.5" />}>
+                          Add
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </Card>
+              )}
+            </div>
+          )}
+
+          {/* Pending incoming requests (own profile only) */}
+          {isOwnProfile && pendingRequests.filter(p => !p.is_requester).length > 0 && (
+            <Card className="mb-3 p-0 divide-y divide-border-default">
+              <div className="px-4 py-2 text-xs font-medium text-text-muted uppercase tracking-wider">Pending Requests</div>
+              {pendingRequests.filter(p => !p.is_requester).map(p => (
+                <div key={p.friendship_id} className="px-4 py-2.5 flex items-center justify-between">
+                  <Link href={`/profile/${p.username}`} className="flex items-center gap-2.5 min-w-0">
+                    <Avatar src={p.avatar_url} size="sm" />
+                    <div className="min-w-0">
+                      <p className="text-sm text-text-primary truncate">{p.display_name || p.username}</p>
+                      <p className="text-[10px] text-text-muted">@{p.username}</p>
+                    </div>
+                  </Link>
+                  <div className="flex gap-1.5">
+                    <Button size="sm" onClick={() => acceptRequest(p.friendship_id).then(() => toast('Accepted!', 'success'))}>
+                      Accept
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => rejectRequest(p.friendship_id)}>
+                      Decline
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </Card>
+          )}
+
+          {friends.length === 0 && !searchQuery.trim() ? (
             <Card className="text-center py-8">
               <Users className="h-8 w-8 text-text-muted mx-auto mb-2" />
               <p className="text-sm text-text-secondary">No friends yet</p>
-              <p className="text-xs text-text-muted mt-1">Visit other profiles and send friend requests to connect</p>
+              <p className="text-xs text-text-muted mt-1">{isOwnProfile ? 'Search above to find and add friends' : 'Visit other profiles and send friend requests to connect'}</p>
             </Card>
-          ) : (
+          ) : friends.length > 0 && (
             <Card className="p-3">
               <div className="flex flex-wrap gap-3">
                 {friends.slice(0, 8).map(f => (

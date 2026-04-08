@@ -74,12 +74,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      if (user) {
-        await fetchProfile(user.id);
+      // Use getSession (cached) for fast initial load, then validate with getUser in background
+      const { data: { session } } = await supabase.auth.getSession();
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      if (currentUser) {
+        await fetchProfile(currentUser.id);
       }
       setLoading(false);
+
+      // Validate session in background
+      if (currentUser) {
+        supabase.auth.getUser().then(({ data: { user: validatedUser } }: { data: { user: User | null } }) => {
+          if (!validatedUser) {
+            setUser(null);
+            setProfile(null);
+          }
+        });
+      }
     };
 
     getUser();

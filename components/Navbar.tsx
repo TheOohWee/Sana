@@ -23,8 +23,8 @@ export function Navbar() {
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-6">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-accent to-accent/60 flex items-center justify-center">
-              <Zap className="h-3.5 w-3.5 text-white fill-white" />
+            <div className="w-7 h-7 rounded-lg bg-success/10 flex items-center justify-center glow-green-sm">
+              <Zap className="h-3.5 w-3.5 text-success fill-success" />
             </div>
             <span className="text-lg font-bold tracking-tight text-text-primary">Sana</span>
           </Link>
