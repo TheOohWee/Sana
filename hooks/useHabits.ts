@@ -42,11 +42,10 @@ export function useHabits() {
       .eq('archived', false)
       .order('created_at', { ascending: true });
     setHabits(data || []);
-  }, [user, supabase]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchEntries = useCallback(async () => {
     if (!user) return;
-    // Fetch last 7 days of entries
     const today = new Date();
     const weekAgo = new Date(today);
     weekAgo.setDate(weekAgo.getDate() - 6);
@@ -58,23 +57,28 @@ export function useHabits() {
       .gte('date', formatDateForDB(weekAgo))
       .lte('date', formatDateForDB(today));
     setEntries(data || []);
-  }, [user, supabase]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addHabit = useCallback(async (habit: { name: string; icon: string; color: string; frequency: 'daily' | 'weekly'; target_count: number }) => {
     if (!user) return null;
     const { data, error } = await supabase
       .from('habits')
-      .insert({ ...habit, user_id: user.id })
+      .insert({ ...habit, user_id: user.id, archived: false })
       .select()
       .single();
+    if (error) {
+      console.error('addHabit error:', error.message, error.details, error.hint);
+      return { data: null, error };
+    }
     if (data) setHabits(prev => [...prev, data]);
-    return { data, error };
-  }, [user, supabase]);
+    return { data, error: null };
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const deleteHabit = useCallback(async (habitId: string) => {
-    await supabase.from('habits').update({ archived: true }).eq('id', habitId);
+    if (!user) return;
+    await supabase.from('habits').update({ archived: true }).eq('id', habitId).eq('user_id', user.id);
     setHabits(prev => prev.filter(h => h.id !== habitId));
-  }, [supabase]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleEntry = useCallback(async (habitId: string, date: string) => {
     if (!user) return;
@@ -85,12 +89,12 @@ export function useHabits() {
     } else {
       const { data } = await supabase
         .from('habit_entries')
-        .insert({ habit_id: habitId, user_id: user.id, date })
+        .insert({ habit_id: habitId, user_id: user.id, date, count: 1 })
         .select()
         .single();
       if (data) setEntries(prev => [...prev, data]);
     }
-  }, [user, supabase, entries]);
+  }, [user, entries]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (user) {

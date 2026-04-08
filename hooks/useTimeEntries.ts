@@ -75,7 +75,7 @@ export function useTimeEntries() {
       week: sum(weekRes.data),
       month: sum(monthRes.data),
     });
-  }, [user, supabase]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchHeatmap = useCallback(async () => {
     if (!user) return;
@@ -99,7 +99,7 @@ export function useTimeEntries() {
       map[d.date] = d.total_minutes;
     });
     setHeatmapData(map);
-  }, [user, supabase]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchEntries = useCallback(async () => {
     if (!user) return;
@@ -114,7 +114,7 @@ export function useTimeEntries() {
 
     setEntries(data || []);
     setLoading(false);
-  }, [user, supabase]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const addEntry = useCallback(
     async (entry: {
@@ -156,7 +156,7 @@ export function useTimeEntries() {
 
       return { data, error: null };
     },
-    [user, supabase, fetchStats, fetchHeatmap]
+    [user, fetchStats, fetchHeatmap] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const deleteEntry = useCallback(
@@ -179,7 +179,7 @@ export function useTimeEntries() {
       fetchHeatmap();
       return { error: null };
     },
-    [user, supabase, fetchStats, fetchHeatmap]
+    [user, fetchStats, fetchHeatmap] // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   useEffect(() => {
