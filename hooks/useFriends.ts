@@ -28,16 +28,17 @@ export function useFriends() {
   const fetchFriends = useCallback(async () => {
     if (!user) return;
 
-    // Fetch friendships where user is either requester or addressee
-    const { data: sent } = await supabase
-      .from('friendships')
-      .select('id, status, requester_id, addressee_id, addressee:profiles!friendships_addressee_id_fkey(id, username, display_name, avatar_url, total_focus_minutes, current_streak)')
-      .eq('requester_id', user.id);
-
-    const { data: received } = await supabase
-      .from('friendships')
-      .select('id, status, requester_id, addressee_id, requester:profiles!friendships_requester_id_fkey(id, username, display_name, avatar_url, total_focus_minutes, current_streak)')
-      .eq('addressee_id', user.id);
+    // Fetch friendships where user is either requester or addressee (parallel)
+    const [{ data: sent }, { data: received }] = await Promise.all([
+      supabase
+        .from('friendships')
+        .select('id, status, requester_id, addressee_id, addressee:profiles!friendships_addressee_id_fkey(id, username, display_name, avatar_url, total_focus_minutes, current_streak)')
+        .eq('requester_id', user.id),
+      supabase
+        .from('friendships')
+        .select('id, status, requester_id, addressee_id, requester:profiles!friendships_requester_id_fkey(id, username, display_name, avatar_url, total_focus_minutes, current_streak)')
+        .eq('addressee_id', user.id),
+    ]);
 
     const allFriends: Friend[] = [];
     const pending: Friend[] = [];

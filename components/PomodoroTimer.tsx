@@ -97,7 +97,7 @@ export function PomodoroTimer({ onLogTime }: PomodoroTimerProps) {
           {timer.state !== 'idle' && (
             <circle
               cx="128" cy="128" r="120" fill="none"
-              stroke={timer.sessionType === 'work' ? '#6C63FF' : '#22C55E'}
+              stroke={timer.sessionType === 'work' ? '#22C55E' : '#06B6D4'}
               strokeWidth="4" strokeLinecap="round"
               strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
               className="transition-[stroke-dashoffset] duration-1000 ease-linear"
