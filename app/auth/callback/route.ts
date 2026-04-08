@@ -7,8 +7,28 @@ export async function GET(request: Request) {
   const next = searchParams.get('next') ?? '/dashboard';
 
   const forwardedHost = request.headers.get('x-forwarded-host');
+  const forwardedProto = request.headers.get('x-forwarded-proto') || 'https';
+  const host = request.headers.get('host');
   const isLocalEnv = process.env.NODE_ENV === 'development';
-  const baseUrl = !isLocalEnv && forwardedHost ? `https://${forwardedHost}` : origin;
+
+  const isLoopback = (h: string) =>
+    h === 'localhost' || h.startsWith('localhost:') ||
+    h === '127.0.0.1' || h.startsWith('127.0.0.1:');
+
+  let baseUrl: string;
+  if (isLocalEnv) {
+    baseUrl = origin;
+  } else if (forwardedHost) {
+    baseUrl = `https://${forwardedHost}`;
+  } else if (host && !isLoopback(host)) {
+    baseUrl = `${forwardedProto}://${host}`;
+  } else if (process.env.NEXT_PUBLIC_SITE_URL) {
+    baseUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  } else {
+    // No reliable base URL could be determined; redirect to error page.
+    // This indicates a misconfigured deployment (set NEXT_PUBLIC_SITE_URL).
+    return NextResponse.redirect(`${origin}/login?error=config_error`);
+  }
 
   if (code) {
     const supabase = await createClient();
