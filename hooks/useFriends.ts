@@ -82,7 +82,7 @@ export function useFriends() {
 
     setFriends(allFriends);
     setPendingRequests(pending);
-  }, [user, supabase]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sendRequest = useCallback(async (addresseeId: string) => {
     if (!user) return { error: 'Not authenticated' };
@@ -91,7 +91,7 @@ export function useFriends() {
       .insert({ requester_id: user.id, addressee_id: addresseeId });
     if (!error) await fetchFriends();
     return { error: error?.message || null };
-  }, [user, supabase, fetchFriends]);
+  }, [user, fetchFriends]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const acceptRequest = useCallback(async (friendshipId: string) => {
     const { error } = await supabase
@@ -100,7 +100,7 @@ export function useFriends() {
       .eq('id', friendshipId);
     if (!error) await fetchFriends();
     return { error: error?.message || null };
-  }, [supabase, fetchFriends]);
+  }, [fetchFriends]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const rejectRequest = useCallback(async (friendshipId: string) => {
     const { error } = await supabase
@@ -109,7 +109,7 @@ export function useFriends() {
       .eq('id', friendshipId);
     if (!error) await fetchFriends();
     return { error: error?.message || null };
-  }, [supabase, fetchFriends]);
+  }, [fetchFriends]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const removeFriend = useCallback(async (friendshipId: string) => {
     const { error } = await supabase
@@ -118,7 +118,7 @@ export function useFriends() {
       .eq('id', friendshipId);
     if (!error) await fetchFriends();
     return { error: error?.message || null };
-  }, [supabase, fetchFriends]);
+  }, [fetchFriends]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getFriendshipStatus = useCallback(async (otherUserId: string) => {
     if (!user) return null;
@@ -128,7 +128,7 @@ export function useFriends() {
       .or(`and(requester_id.eq.${user.id},addressee_id.eq.${otherUserId}),and(requester_id.eq.${otherUserId},addressee_id.eq.${user.id})`)
       .maybeSingle();
     return data;
-  }, [user, supabase]);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (user) {
